@@ -627,7 +627,7 @@ generate_root_ca() {
         cfssljson -bare /certs/root-ca
     
     # Set restrictive permissions on private key
-    chmod 600 "${PKI_ROOT_DIR}/root-ca-key.pem"
+    chmod 400 "${PKI_ROOT_DIR}/root-ca-key.pem"
     chown "${PKI_USER}:${PKI_GROUP}" "${PKI_ROOT_DIR}"/*
     
     log_info "Root CA certificate generated successfully"
@@ -693,7 +693,7 @@ generate_intermediate_ca() {
         cfssljson -bare /certs/${name}
     
     # Set permissions
-    chmod 600 "${int_dir}/${name}-key.pem"
+    chmod 400 "${int_dir}/${name}-key.pem"
     chown -R "${PKI_USER}:${PKI_GROUP}" "$int_dir"
     
     log_info "${display_name} certificate generated and signed successfully"
@@ -1088,7 +1088,7 @@ rotate_intermediate_cert() {
         cfssljson -bare /certs/${name}
     
     # Set permissions
-    chmod 600 "${int_dir}/${name}-key.pem"
+    chmod 400 "${int_dir}/${name}-key.pem"
     chown -R "${PKI_USER}:${PKI_GROUP}" "$int_dir"
     
     # Update bundle
