@@ -57,7 +57,7 @@ The CFSSL API runs over **HTTPS**. Clients must first download the CA bundle via
 
 ```bash
 # Step 1: Download CA bundle via SSH (secure, authenticated)
-scp pki-adm@<server>:/opt/pki/client/ca-bundle.crt ./
+scp pki-adm@<server>:/opt/pki/certs/api/ca-bundle.crt ./
 
 # Step 2: Request leaf certificate via HTTPS (verified connection)
 curl --cacert ca-bundle.crt \
@@ -144,15 +144,12 @@ During installation, you'll be prompted for:
 │   │       └── intermediate-2.csr
 │   ├── api/
 │   │   ├── api-server.pem           # HTTPS API server cert
-│   │   └── api-server-key.pem       # HTTPS API server key
+│   │   ├── api-server-key.pem       # HTTPS API server key
+│   │   └── ca-bundle.crt            # CA bundle for client download
 │   └── bundle/
 │       ├── intermediate-1-bundle.pem
 │       ├── intermediate-2-bundle.pem
 │       └── ca-bundle.crt
-├── client/                           # SSH-downloadable certs
-│   ├── ca-bundle.crt
-│   ├── intermediate-1-bundle.pem
-│   └── intermediate-2-bundle.pem
 ├── config/
 │   ├── root-ca-csr.json
 │   ├── root-ca-config.json
@@ -173,8 +170,7 @@ During installation, you'll be prompted for:
 | Private keys | `400` | Read-only, owner only |
 | Certificates | `644` | Readable by all |
 | Config files | `640` | Owner read/write, group read |
-| Client directory | `755` | World-readable for SSH download |
-| API directory | `750` | Restricted to pki-adm group |
+| API directory | `755` | Readable for SSH download |
 
 ---
 

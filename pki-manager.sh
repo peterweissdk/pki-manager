@@ -25,7 +25,6 @@ PKI_ROOT_DIR="${PKI_CERTS_DIR}/root"
 PKI_INTERMEDIATE_DIR="${PKI_CERTS_DIR}/intermediate"
 PKI_BUNDLE_DIR="${PKI_CERTS_DIR}/bundle"
 PKI_API_DIR="${PKI_CERTS_DIR}/api"
-PKI_CLIENT_DIR="${PKI_BASE_DIR}/client"
 PKI_USER="pki-adm"
 PKI_GROUP="pki-adm"
 DOCKER_COMPOSE_DIR="${PKI_BASE_DIR}/docker"
@@ -253,7 +252,7 @@ setup_pki_permissions() {
     # Create directories if they don't exist
     mkdir -p "$PKI_CERTS_DIR" "$PKI_CONFIG_DIR" "$PKI_ROOT_DIR" \
              "$PKI_INTERMEDIATE_DIR" "$PKI_BUNDLE_DIR" "$PKI_API_DIR" \
-             "$PKI_CLIENT_DIR" "$DOCKER_COMPOSE_DIR"
+             "$DOCKER_COMPOSE_DIR"
     
     # Set ownership
     chown -R "${PKI_USER}:${PKI_GROUP}" "$PKI_BASE_DIR"
@@ -264,8 +263,7 @@ setup_pki_permissions() {
     chmod 700 "$PKI_ROOT_DIR"
     chmod 750 "$PKI_INTERMEDIATE_DIR"
     chmod 755 "$PKI_BUNDLE_DIR"
-    chmod 750 "$PKI_API_DIR"
-    chmod 755 "$PKI_CLIENT_DIR"
+    chmod 755 "$PKI_API_DIR"
     
     log_info "PKI directory permissions configured"
 }
@@ -804,27 +802,15 @@ EOF
     log_info "API server certificate generated successfully"
 }
 
-# Copy certificates to client download directory
+# Copy CA bundle to API directory for client download
 setup_client_certs() {
-    log_section "Setting up Client Download Directory"
+    log_section "Setting up Client Certificates"
     
-    # Copy CA bundle for clients
-    cp "${PKI_BUNDLE_DIR}/ca-bundle.crt" "${PKI_CLIENT_DIR}/"
+    # Copy CA bundle to API directory for clients to download
+    cp "${PKI_BUNDLE_DIR}/ca-bundle.crt" "${PKI_API_DIR}/"
+    chmod 644 "${PKI_API_DIR}/ca-bundle.crt"
     
-    # Copy individual intermediate bundles
-    for bundle in "${PKI_BUNDLE_DIR}"/*-bundle.pem; do
-        if [[ -f "$bundle" ]]; then
-            cp "$bundle" "${PKI_CLIENT_DIR}/"
-        fi
-    done
-    
-    # Set permissions - readable by all
-    chown -R "${PKI_USER}:${PKI_GROUP}" "${PKI_CLIENT_DIR}"
-    chmod 644 "${PKI_CLIENT_DIR}"/*
-    
-    log_info "Client certificates available at: ${PKI_CLIENT_DIR}"
-    log_info "Files available for download:"
-    ls -la "${PKI_CLIENT_DIR}/"
+    log_info "CA bundle available for download at: ${PKI_API_DIR}/ca-bundle.crt"
 }
 
 # Create multiroot CA config
@@ -1293,10 +1279,9 @@ install_pki() {
     log_info "  - Configuration: ${PKI_CONFIG_DIR}"
     log_info "  - Docker Compose: ${DOCKER_COMPOSE_DIR}"
     log_info ""
-    log_info "SSH access for certificate download:"
+    log_info "SSH access for CA bundle download:"
     log_info "  - User: ${PKI_USER}"
-    log_info "  - Client certs: ${PKI_CLIENT_DIR}"
-    log_info "  - Download: scp ${PKI_USER}@<server>:${PKI_CLIENT_DIR}/ca-bundle.crt ./"
+    log_info "  - Download: scp ${PKI_USER}@<server>:${PKI_API_DIR}/ca-bundle.crt ./"
     log_info ""
     log_info "CFSSL API endpoints:"
     log_info "  - Multiroot CA: http://localhost:8888"
