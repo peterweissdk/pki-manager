@@ -23,7 +23,7 @@
 - Linux (Debian/Ubuntu, RHEL/CentOS/Fedora, Arch, Alpine)
 - Root privileges
 - Docker & Docker Compose (auto-install available)
-- OpenSSH server (auto-install available)
+- CA server using CFSSL toolkit (auto-install available)
 
 ### Installation
 
