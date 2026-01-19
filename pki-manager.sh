@@ -853,28 +853,6 @@ create_docker_compose() {
 version: '3.8'
 
 services:
-  cfssl-multirootca:
-    image: cfssl/cfssl:latest
-    container_name: cfssl-multirootca
-    restart: unless-stopped
-    ports:
-      - "8888:8888"
-    volumes:
-      - ${PKI_CERTS_DIR}:/certs:ro
-      - ${PKI_CONFIG_DIR}:/config:ro
-    command: >
-      multirootca
-      -a 0.0.0.0:8888
-      -roots /config/multiroot-config.ini
-      -loglevel 1
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/api/v1/cfssl/info"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - pki-network
-
   cfssl-api:
     image: cfssl/cfssl:latest
     container_name: cfssl-api
@@ -891,14 +869,11 @@ services:
       -tls-cert /certs/api/api-server.pem
       -tls-key /certs/api/api-server-key.pem
       -loglevel 1
-    depends_on:
-      - cfssl-multirootca
-    networks:
-      - pki-network
-
-networks:
-  pki-network:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "--no-check-certificate", "https://localhost:8889/api/v1/cfssl/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 EOF
     
     chown "${PKI_USER}:${PKI_GROUP}" "${DOCKER_COMPOSE_DIR}/docker-compose.yml"
@@ -913,7 +888,6 @@ start_cfssl_services() {
     docker compose up -d
     
     log_info "CFSSL services started"
-    log_info "Multiroot CA API (HTTP): http://localhost:8888"
     log_info "Multiroot CA API (HTTPS): https://localhost:8889"
     log_info ""
     log_info "Use 'label' parameter to choose signing CA:"
@@ -1285,9 +1259,8 @@ install_pki() {
     log_info "  - User: ${PKI_USER}"
     log_info "  - Download: scp ${PKI_USER}@<server>:${PKI_API_DIR}/ca-bundle.crt ./"
     log_info ""
-    log_info "CFSSL API endpoints (both use multirootca):"
-    log_info "  - HTTP:  http://localhost:8888"
-    log_info "  - HTTPS: https://localhost:8889"
+    log_info "CFSSL API endpoint (multirootca with HTTPS):"
+    log_info "  - https://localhost:8889"
     log_info ""
     log_info "Client usage (after downloading CA bundle via SSH):"
     log_info "  curl --cacert ca-bundle.crt -X POST -H 'Content-Type: application/json' \\"

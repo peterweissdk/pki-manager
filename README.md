@@ -66,14 +66,13 @@ curl --cacert ca-bundle.crt \
   https://<server>:8889/api/v1/cfssl/newcert
 ```
 
-### API Endpoints
+### API Endpoint
 
 | Endpoint | Protocol | Port | Purpose |
 |----------|----------|------|---------|
-| Multiroot CA | HTTP | 8888 | Internal/testing |
-| Multiroot CA | HTTPS | 8889 | Certificate issuance (recommended) |
+| Multiroot CA | HTTPS | 8889 | Certificate issuance |
 
-Both endpoints use `multirootca` and support the `label` parameter to choose which intermediate CA signs the certificate.
+The API uses `multirootca` and supports the `label` parameter to choose which intermediate CA signs the certificate.
 
 ### Choosing the Signing CA
 
