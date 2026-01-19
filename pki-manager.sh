@@ -718,26 +718,10 @@ create_cert_bundle() {
         fi
     done
     
-    # Create full chain bundle using mkbundle
-    log_info "Creating full CA bundle with mkbundle..."
+    # Create full CA bundle (root first, then intermediates)
+    log_info "Creating full CA bundle..."
     
-    # Collect all CA certs
-    local all_certs=""
-    all_certs="${PKI_ROOT_DIR}/root-ca.pem"
-    for int_dir in "${PKI_INTERMEDIATE_DIR}"/*; do
-        if [[ -d "$int_dir" ]]; then
-            local name=$(basename "$int_dir")
-            all_certs="${all_certs} ${int_dir}/${name}.pem"
-        fi
-    done
-    
-    # Use mkbundle to create the bundle
-    docker run --rm \
-        -v "${PKI_CERTS_DIR}:/certs" \
-        cfssl/cfssl:latest \
-        mkbundle -f /certs/bundle/ca-bundle.crt /certs/root/root-ca.pem
-    
-    # Add intermediates to bundle
+    cat "${PKI_ROOT_DIR}/root-ca.pem" > "${PKI_BUNDLE_DIR}/ca-bundle.crt"
     for int_dir in "${PKI_INTERMEDIATE_DIR}"/*; do
         if [[ -d "$int_dir" ]]; then
             local name=$(basename "$int_dir")
