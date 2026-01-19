@@ -83,19 +83,58 @@ Use the `label` parameter to specify which intermediate CA signs your certificat
 | `intermediate-1` | Intermediate CA 1 |
 | `intermediate-2` | Intermediate CA 2 |
 
-```bash
-# Request certificate signed by intermediate-1
-curl --cacert ca-bundle.crt \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "label": "intermediate-1", "bundle": true}' \
-  https://<server>:8889/api/v1/cfssl/newcert
+### Using a JSON CSR File
 
-# Request certificate signed by intermediate-2
+Create a CSR JSON file with all certificate options:
+
+```json
+{
+  "CN": "myserver.example.com",
+  "hosts": [
+    "myserver.example.com",
+    "myserver",
+    "192.168.1.100"
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "ST": "California",
+      "L": "San Francisco",
+      "O": "My Company",
+      "OU": "IT Department"
+    }
+  ]
+}
+```
+
+Request certificate using the JSON file:
+
+```bash
 curl --cacert ca-bundle.crt \
   -X POST -H "Content-Type: application/json" \
-  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "label": "intermediate-2", "bundle": true}' \
+  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate-1\", \"bundle\": true}" \
   https://<server>:8889/api/v1/cfssl/newcert
 ```
+
+### CSR JSON Options
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| `CN` | Common Name | `myserver.example.com` |
+| `hosts` | SANs (DNS names, IPs) | `["example.com", "10.0.0.1"]` |
+| `key.algo` | Key algorithm | `rsa`, `ecdsa` |
+| `key.size` | Key size | `2048`, `4096` (RSA), `256`, `384` (ECDSA) |
+| `names[].C` | Country | `US` |
+| `names[].ST` | State | `California` |
+| `names[].L` | Locality | `San Francisco` |
+| `names[].O` | Organization | `My Company` |
+| `names[].OU` | Organizational Unit | `IT Department` |
+
+> **Note**: Leaf certificate key algorithm and size are independent of the intermediate CA. You can use ECDSA leaf certs even if the intermediate uses RSA.
 
 ### Extract Certificate and Key
 
@@ -103,7 +142,7 @@ curl --cacert ca-bundle.crt \
 # Single API call, extract both cert chain and key
 response=$(curl -s --cacert ca-bundle.crt \
   -X POST -H "Content-Type: application/json" \
-  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "label": "intermediate-1", "bundle": true}' \
+  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate-1\", \"bundle\": true}" \
   https://<server>:8889/api/v1/cfssl/newcert)
 
 echo "$response" | jq -r '.result.bundle.bundle' > fullchain.pem
