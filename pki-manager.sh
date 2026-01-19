@@ -1218,6 +1218,28 @@ install_pki() {
     log_info "  - CFSSL API: http://localhost:8889"
 }
 
+# Start or restart CFSSL services
+start_cfssl() {
+    if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
+        cd "$DOCKER_COMPOSE_DIR"
+        docker compose up -d
+        log_info "CFSSL services started"
+    else
+        log_error "Docker Compose file not found. Please install PKI first."
+    fi
+}
+
+# Stop CFSSL services
+stop_cfssl() {
+    if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
+        cd "$DOCKER_COMPOSE_DIR"
+        docker compose down
+        log_info "CFSSL services stopped"
+    else
+        log_error "Docker Compose file not found."
+    fi
+}
+
 # Main menu
 main_menu() {
     clear
@@ -1258,22 +1280,10 @@ EOF
             display_cert_summary
             ;;
         5)
-            if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
-                cd "$DOCKER_COMPOSE_DIR"
-                docker compose up -d
-                log_info "CFSSL services started"
-            else
-                log_error "Docker Compose file not found. Please install PKI first."
-            fi
+            start_cfssl
             ;;
         6)
-            if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
-                cd "$DOCKER_COMPOSE_DIR"
-                docker compose down
-                log_info "CFSSL services stopped"
-            else
-                log_error "Docker Compose file not found."
-            fi
+            stop_cfssl
             ;;
         0)
             log_info "Exiting..."
