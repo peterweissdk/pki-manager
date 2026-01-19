@@ -885,14 +885,12 @@ services:
       - ${PKI_CERTS_DIR}:/certs:ro
       - ${PKI_CONFIG_DIR}:/config:ro
     command: >
-      serve
-      -address 0.0.0.0
-      -port 8889
+      multirootca
+      -a 0.0.0.0:8889
+      -roots /config/multiroot-config.ini
       -tls-cert /certs/api/api-server.pem
       -tls-key /certs/api/api-server-key.pem
-      -ca /certs/intermediate/intermediate-1/intermediate-1.pem
-      -ca-key /certs/intermediate/intermediate-1/intermediate-1-key.pem
-      -config /config/intermediate-1-config.json
+      -loglevel 1
     depends_on:
       - cfssl-multirootca
     networks:
@@ -915,8 +913,12 @@ start_cfssl_services() {
     docker compose up -d
     
     log_info "CFSSL services started"
-    log_info "Multiroot CA API: http://localhost:8888"
-    log_info "CFSSL API: http://localhost:8889"
+    log_info "Multiroot CA API (HTTP): http://localhost:8888"
+    log_info "Multiroot CA API (HTTPS): https://localhost:8889"
+    log_info ""
+    log_info "Use 'label' parameter to choose signing CA:"
+    log_info "  - intermediate-1"
+    log_info "  - intermediate-2"
 }
 
 # Print certificate information
@@ -1283,12 +1285,16 @@ install_pki() {
     log_info "  - User: ${PKI_USER}"
     log_info "  - Download: scp ${PKI_USER}@<server>:${PKI_API_DIR}/ca-bundle.crt ./"
     log_info ""
-    log_info "CFSSL API endpoints:"
-    log_info "  - Multiroot CA: http://localhost:8888"
-    log_info "  - CFSSL API (HTTPS): https://localhost:8889"
+    log_info "CFSSL API endpoints (both use multirootca):"
+    log_info "  - HTTP:  http://localhost:8888"
+    log_info "  - HTTPS: https://localhost:8889"
     log_info ""
     log_info "Client usage (after downloading CA bundle via SSH):"
-    log_info "  curl --cacert ca-bundle.crt https://<server>:8889/api/v1/cfssl/newcert ..."
+    log_info "  curl --cacert ca-bundle.crt -X POST -H 'Content-Type: application/json' \\"
+    log_info "    -d '{\"request\":{\"CN\":\"example.com\"},\"label\":\"intermediate-1\"}' \\"
+    log_info "    https://<server>:8889/api/v1/cfssl/newcert"
+    log_info ""
+    log_info "Available labels: intermediate-1, intermediate-2"
 }
 
 # Start or restart CFSSL services

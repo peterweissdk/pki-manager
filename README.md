@@ -70,17 +70,31 @@ curl --cacert ca-bundle.crt \
 
 | Endpoint | Protocol | Port | Purpose |
 |----------|----------|------|---------|
-| Multiroot CA | HTTP | 8888 | Internal CA management |
-| CFSSL API | HTTPS | 8889 | Certificate issuance |
+| Multiroot CA | HTTP | 8888 | Internal/testing |
+| Multiroot CA | HTTPS | 8889 | Certificate issuance (recommended) |
+
+Both endpoints use `multirootca` and support the `label` parameter to choose which intermediate CA signs the certificate.
+
+### Choosing the Signing CA
+
+Use the `label` parameter to specify which intermediate CA signs your certificate:
+
+| Label | Signing CA |
+|-------|------------|
+| `intermediate-1` | Intermediate CA 1 |
+| `intermediate-2` | Intermediate CA 2 |
 
 ```bash
-# Get CA info
-curl --cacert ca-bundle.crt https://<server>:8889/api/v1/cfssl/info
-
-# Request certificate with full chain
+# Request certificate signed by intermediate-1
 curl --cacert ca-bundle.crt \
   -X POST -H "Content-Type: application/json" \
-  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "bundle": true}' \
+  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "label": "intermediate-1", "bundle": true}' \
+  https://<server>:8889/api/v1/cfssl/newcert
+
+# Request certificate signed by intermediate-2
+curl --cacert ca-bundle.crt \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "label": "intermediate-2", "bundle": true}' \
   https://<server>:8889/api/v1/cfssl/newcert
 ```
 
@@ -90,7 +104,7 @@ curl --cacert ca-bundle.crt \
 # Single API call, extract both cert chain and key
 response=$(curl -s --cacert ca-bundle.crt \
   -X POST -H "Content-Type: application/json" \
-  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "bundle": true}' \
+  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "label": "intermediate-1", "bundle": true}' \
   https://<server>:8889/api/v1/cfssl/newcert)
 
 echo "$response" | jq -r '.result.bundle.bundle' > fullchain.pem
