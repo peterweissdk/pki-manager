@@ -8,10 +8,11 @@
 |---------|-------------|
 | Root CA Generation | Configurable RSA key sizes (2048-8192 bits) |
 | Intermediate CAs | 2 intermediate CAs for day-to-day issuance |
-| CFSSL API Server | Docker-based multirootca for API requests |
-| SSH Access | Dedicated `pki-adm` user for certificate downloads |
+| CFSSL API Server | Docker-based multirootca with HTTPS API |
+| SSH Access | Dedicated `pki-adm` user for secure CA bundle download |
 | Certificate Rotation | Built-in rotation for expiring certificates |
 | Expiry Monitoring | Color-coded expiry warnings |
+| Secure Bootstrap | SSH-based CA distribution for trusted HTTPS access |
 
 ---
 
@@ -50,24 +51,50 @@ sudo ./pki-manager.sh
 | 6 | Stop CFSSL services |
 | 0 | Exit |
 
-### API Endpoints
+### Secure Client Bootstrap
 
-After installation:
+The CFSSL API runs over **HTTPS**. Clients must first download the CA bundle via SSH to establish trust:
 
 ```bash
-# Multiroot CA API
-curl http://localhost:8888/api/v1/cfssl/info
+# Step 1: Download CA bundle via SSH (secure, authenticated)
+scp pki-adm@<server>:/opt/pki/client/ca-bundle.crt ./
 
-# CFSSL API - Request new certificate
-curl -X POST -H "Content-Type: application/json" \
-  -d '{"request":{"CN":"example.com","hosts":["example.com"]}}' \
-  http://localhost:8889/api/v1/cfssl/newcert
+# Step 2: Request leaf certificate via HTTPS (verified connection)
+curl --cacert ca-bundle.crt \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"request":{"CN":"myserver.example.com","hosts":["myserver.example.com"]}, "bundle": true}' \
+  https://<server>:8889/api/v1/cfssl/newcert
 ```
 
-### SSH Certificate Download
+### API Endpoints
+
+| Endpoint | Protocol | Port | Purpose |
+|----------|----------|------|---------|
+| Multiroot CA | HTTP | 8888 | Internal CA management |
+| CFSSL API | HTTPS | 8889 | Certificate issuance |
 
 ```bash
-scp pki-adm@<server>:/opt/pki/certs/bundle/ca-bundle.crt ./
+# Get CA info
+curl --cacert ca-bundle.crt https://<server>:8889/api/v1/cfssl/info
+
+# Request certificate with full chain
+curl --cacert ca-bundle.crt \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "bundle": true}' \
+  https://<server>:8889/api/v1/cfssl/newcert
+```
+
+### Extract Certificate and Key
+
+```bash
+# Single API call, extract both cert chain and key
+response=$(curl -s --cacert ca-bundle.crt \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"request":{"CN":"example.com","hosts":["example.com"]}, "bundle": true}' \
+  https://<server>:8889/api/v1/cfssl/newcert)
+
+echo "$response" | jq -r '.result.bundle.bundle' > fullchain.pem
+echo "$response" | jq -r '.result.private_key' > privkey.pem
 ```
 
 ---
@@ -115,13 +142,21 @@ During installation, you'll be prompted for:
 │   │       ├── intermediate-2.pem
 │   │       ├── intermediate-2-key.pem
 │   │       └── intermediate-2.csr
+│   ├── api/
+│   │   ├── api-server.pem           # HTTPS API server cert
+│   │   └── api-server-key.pem       # HTTPS API server key
 │   └── bundle/
 │       ├── intermediate-1-bundle.pem
 │       ├── intermediate-2-bundle.pem
 │       └── ca-bundle.crt
+├── client/                           # SSH-downloadable certs
+│   ├── ca-bundle.crt
+│   ├── intermediate-1-bundle.pem
+│   └── intermediate-2-bundle.pem
 ├── config/
 │   ├── root-ca-csr.json
 │   ├── root-ca-config.json
+│   ├── api-server-csr.json
 │   ├── intermediate-1-csr.json
 │   ├── intermediate-1-config.json
 │   ├── intermediate-2-csr.json
@@ -138,6 +173,8 @@ During installation, you'll be prompted for:
 | Private keys | `400` | Read-only, owner only |
 | Certificates | `644` | Readable by all |
 | Config files | `640` | Owner read/write, group read |
+| Client directory | `755` | World-readable for SSH download |
+| API directory | `750` | Restricted to pki-adm group |
 
 ---
 
