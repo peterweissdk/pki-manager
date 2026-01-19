@@ -24,6 +24,8 @@ PKI_CONFIG_DIR="${PKI_BASE_DIR}/config"
 PKI_ROOT_DIR="${PKI_CERTS_DIR}/root"
 PKI_INTERMEDIATE_DIR="${PKI_CERTS_DIR}/intermediate"
 PKI_BUNDLE_DIR="${PKI_CERTS_DIR}/bundle"
+PKI_API_DIR="${PKI_CERTS_DIR}/api"
+PKI_CLIENT_DIR="${PKI_BASE_DIR}/client"
 PKI_USER="pki-adm"
 PKI_GROUP="pki-adm"
 DOCKER_COMPOSE_DIR="${PKI_BASE_DIR}/docker"
@@ -250,7 +252,8 @@ setup_pki_permissions() {
     
     # Create directories if they don't exist
     mkdir -p "$PKI_CERTS_DIR" "$PKI_CONFIG_DIR" "$PKI_ROOT_DIR" \
-             "$PKI_INTERMEDIATE_DIR" "$PKI_BUNDLE_DIR" "$DOCKER_COMPOSE_DIR"
+             "$PKI_INTERMEDIATE_DIR" "$PKI_BUNDLE_DIR" "$PKI_API_DIR" \
+             "$PKI_CLIENT_DIR" "$DOCKER_COMPOSE_DIR"
     
     # Set ownership
     chown -R "${PKI_USER}:${PKI_GROUP}" "$PKI_BASE_DIR"
@@ -261,6 +264,8 @@ setup_pki_permissions() {
     chmod 700 "$PKI_ROOT_DIR"
     chmod 750 "$PKI_INTERMEDIATE_DIR"
     chmod 755 "$PKI_BUNDLE_DIR"
+    chmod 750 "$PKI_API_DIR"
+    chmod 755 "$PKI_CLIENT_DIR"
     
     log_info "PKI directory permissions configured"
 }
@@ -735,6 +740,93 @@ create_cert_bundle() {
     log_info "Certificate bundles created successfully"
 }
 
+# Generate API server certificate for HTTPS
+generate_api_server_cert() {
+    log_section "Generating API Server Certificate for HTTPS"
+    
+    # Get the server hostname
+    local api_hostname
+    api_hostname=$(hostname -f 2>/dev/null || hostname)
+    local api_ip
+    api_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
+    
+    log_info "Generating certificate for API server..."
+    log_info "  Hostname: ${api_hostname}"
+    log_info "  IP: ${api_ip}"
+    
+    # Create API server CSR config
+    cat > "${PKI_CONFIG_DIR}/api-server-csr.json" << EOF
+{
+    "CN": "${api_hostname}",
+    "hosts": [
+        "${api_hostname}",
+        "${api_ip}",
+        "localhost",
+        "127.0.0.1"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 4096
+    },
+    "names": [
+        {
+            "C": "US",
+            "L": "PKI Server",
+            "O": "PKI Manager",
+            "ST": "CA"
+        }
+    ]
+}
+EOF
+    
+    # Generate and sign API server certificate using intermediate-1
+    docker run --rm \
+        -v "${PKI_CONFIG_DIR}:/config" \
+        -v "${PKI_API_DIR}:/certs" \
+        -v "${PKI_INTERMEDIATE_DIR}/intermediate-1:/ca" \
+        cfssl/cfssl:latest \
+        cfssl gencert \
+            -ca /ca/intermediate-1.pem \
+            -ca-key /ca/intermediate-1-key.pem \
+            -config /config/intermediate-1-config.json \
+            -profile server \
+            /config/api-server-csr.json | \
+    docker run --rm -i \
+        -v "${PKI_API_DIR}:/certs" \
+        cfssl/cfssl:latest \
+        cfssljson -bare /certs/api-server
+    
+    # Set permissions
+    chmod 400 "${PKI_API_DIR}/api-server-key.pem"
+    chmod 644 "${PKI_API_DIR}/api-server.pem"
+    chown -R "${PKI_USER}:${PKI_GROUP}" "${PKI_API_DIR}"
+    
+    log_info "API server certificate generated successfully"
+}
+
+# Copy certificates to client download directory
+setup_client_certs() {
+    log_section "Setting up Client Download Directory"
+    
+    # Copy CA bundle for clients
+    cp "${PKI_BUNDLE_DIR}/ca-bundle.crt" "${PKI_CLIENT_DIR}/"
+    
+    # Copy individual intermediate bundles
+    for bundle in "${PKI_BUNDLE_DIR}"/*-bundle.pem; do
+        if [[ -f "$bundle" ]]; then
+            cp "$bundle" "${PKI_CLIENT_DIR}/"
+        fi
+    done
+    
+    # Set permissions - readable by all
+    chown -R "${PKI_USER}:${PKI_GROUP}" "${PKI_CLIENT_DIR}"
+    chmod 644 "${PKI_CLIENT_DIR}"/*
+    
+    log_info "Client certificates available at: ${PKI_CLIENT_DIR}"
+    log_info "Files available for download:"
+    ls -la "${PKI_CLIENT_DIR}/"
+}
+
 # Create multiroot CA config
 create_multiroot_config() {
     log_section "Creating Multiroot CA Configuration"
@@ -810,6 +902,8 @@ services:
       serve
       -address 0.0.0.0
       -port 8889
+      -tls-cert /certs/api/api-server.pem
+      -tls-key /certs/api/api-server-key.pem
       -ca /certs/intermediate/intermediate-1/intermediate-1.pem
       -ca-key /certs/intermediate/intermediate-1/intermediate-1-key.pem
       -config /config/intermediate-1-config.json
@@ -1168,6 +1262,12 @@ install_pki() {
     # Create bundles
     create_cert_bundle
     
+    # Generate API server certificate for HTTPS
+    generate_api_server_cert
+    
+    # Setup client download directory
+    setup_client_certs
+    
     # Create multiroot config
     create_multiroot_config
     
@@ -1195,11 +1295,15 @@ install_pki() {
     log_info ""
     log_info "SSH access for certificate download:"
     log_info "  - User: ${PKI_USER}"
-    log_info "  - Certificates readable at: ${PKI_BUNDLE_DIR}"
+    log_info "  - Client certs: ${PKI_CLIENT_DIR}"
+    log_info "  - Download: scp ${PKI_USER}@<server>:${PKI_CLIENT_DIR}/ca-bundle.crt ./"
     log_info ""
     log_info "CFSSL API endpoints:"
     log_info "  - Multiroot CA: http://localhost:8888"
-    log_info "  - CFSSL API: http://localhost:8889"
+    log_info "  - CFSSL API (HTTPS): https://localhost:8889"
+    log_info ""
+    log_info "Client usage (after downloading CA bundle via SSH):"
+    log_info "  curl --cacert ca-bundle.crt https://<server>:8889/api/v1/cfssl/newcert ..."
 }
 
 # Start or restart CFSSL services
