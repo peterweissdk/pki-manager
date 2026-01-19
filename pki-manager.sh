@@ -139,12 +139,26 @@ install_ssh() {
         yum install -y openssh-server
     elif command -v pacman &> /dev/null; then
         pacman -S --noconfirm openssh
+    elif command -v apk &> /dev/null; then
+        # Alpine Linux
+        apk update
+        apk add openssh-server
     else
         log_error "Unable to detect package manager. Please install OpenSSH manually."
         exit $EXIT_SSH_ERROR
     fi
-    systemctl enable sshd
-    systemctl start sshd
+    
+    # Start SSH service (handle both systemd and OpenRC)
+    if command -v systemctl &> /dev/null; then
+        systemctl enable sshd
+        systemctl start sshd
+    elif command -v rc-service &> /dev/null; then
+        # Alpine Linux uses OpenRC
+        rc-update add sshd default
+        rc-service sshd start
+    else
+        log_warn "Unable to detect init system. Please start SSH service manually."
+    fi
     log_info "SSH server installed and started"
 }
 
@@ -298,14 +312,31 @@ install_docker() {
         yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
         yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         
+    elif command -v pacman &> /dev/null; then
+        # Arch Linux
+        pacman -Sy --noconfirm docker docker-compose
+        
+    elif command -v apk &> /dev/null; then
+        # Alpine Linux
+        apk update
+        apk add docker docker-cli-compose
+        
     else
         log_error "Unable to detect package manager. Please install Docker manually."
         exit $EXIT_DOCKER_ERROR
     fi
     
-    # Start and enable Docker
-    systemctl enable docker
-    systemctl start docker
+    # Start and enable Docker (handle both systemd and OpenRC)
+    if command -v systemctl &> /dev/null; then
+        systemctl enable docker
+        systemctl start docker
+    elif command -v rc-service &> /dev/null; then
+        # Alpine Linux uses OpenRC
+        rc-update add docker default
+        rc-service docker start
+    else
+        log_warn "Unable to detect init system. Please start Docker service manually."
+    fi
     
     # Add pki-adm user to docker group
     usermod -aG docker "$PKI_USER"
