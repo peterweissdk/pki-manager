@@ -625,11 +625,11 @@ generate_root_ca() {
     # Generate Root CA using cfssl in Docker
     log_info "Generating Root CA certificate..."
     
-    docker run --rm \
+    docker run --rm -e NO_COLOR=1 \
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${PKI_ROOT_DIR}:/certs" \
         cfssl/cfssl:latest \
-        gencert -initca /config/root-ca-csr.json | \
+        gencert -initca /config/root-ca-csr.json 2>/dev/null | \
     docker run --rm -i --entrypoint cfssljson \
         -v "${PKI_ROOT_DIR}:/certs" \
         cfssl/cfssl:latest \
@@ -672,11 +672,11 @@ generate_intermediate_ca() {
     # Generate Intermediate CA CSR
     log_info "Generating ${display_name} CSR..."
     
-    docker run --rm \
+    docker run --rm -e NO_COLOR=1 \
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        gencert -initca /config/${name}-csr.json | \
+        gencert -initca /config/${name}-csr.json 2>/dev/null | \
     docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
@@ -685,7 +685,7 @@ generate_intermediate_ca() {
     # Sign with Root CA
     log_info "Signing ${display_name} with Root CA..."
     
-    docker run --rm \
+    docker run --rm -e NO_COLOR=1 \
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${PKI_ROOT_DIR}:/root-ca" \
         -v "${int_dir}:/certs" \
@@ -695,7 +695,7 @@ generate_intermediate_ca() {
             -ca-key /root-ca/root-ca-key.pem \
             -config /config/root-ca-config.json \
             -profile intermediate \
-            /certs/${name}.csr | \
+            /certs/${name}.csr 2>/dev/null | \
     docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
@@ -784,7 +784,7 @@ generate_api_server_cert() {
 EOF
     
     # Generate and sign API server certificate using intermediate-1
-    docker run --rm \
+    docker run --rm -e NO_COLOR=1 \
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${PKI_API_DIR}:/certs" \
         -v "${PKI_INTERMEDIATE_DIR}/intermediate-1:/ca" \
@@ -794,7 +794,7 @@ EOF
             -ca-key /ca/intermediate-1-key.pem \
             -config /config/intermediate-1-config.json \
             -profile server \
-            /config/api-server-csr.json | \
+            /config/api-server-csr.json 2>/dev/null | \
     docker run --rm -i --entrypoint cfssljson \
         -v "${PKI_API_DIR}:/certs" \
         cfssl/cfssl:latest \
@@ -1116,11 +1116,11 @@ rotate_intermediate_cert() {
     # Regenerate intermediate
     log_info "Generating new intermediate certificate..."
     
-    docker run --rm \
+    docker run --rm -e NO_COLOR=1 \
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        gencert -initca /config/${name}-csr.json | \
+        gencert -initca /config/${name}-csr.json 2>/dev/null | \
     docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
@@ -1129,7 +1129,7 @@ rotate_intermediate_cert() {
     # Sign with Root CA
     log_info "Signing with Root CA..."
     
-    docker run --rm \
+    docker run --rm -e NO_COLOR=1 \
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${PKI_ROOT_DIR}:/root-ca" \
         -v "${int_dir}:/certs" \
@@ -1139,7 +1139,7 @@ rotate_intermediate_cert() {
             -ca-key /root-ca/root-ca-key.pem \
             -config /config/root-ca-config.json \
             -profile intermediate \
-            /certs/${name}.csr | \
+            /certs/${name}.csr 2>/dev/null | \
     docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
