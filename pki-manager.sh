@@ -229,8 +229,9 @@ generate_ssh_keys() {
     
     log_info "Generating SSH keys for user '$username'..."
     
-    # Create .ssh directory
+    # Create .ssh directory with correct ownership
     mkdir -p "$ssh_dir"
+    chown "${username}:${PKI_GROUP}" "$ssh_dir"
     chmod 700 "$ssh_dir"
     
     # Generate ED25519 key (more secure and faster than RSA)
@@ -239,8 +240,7 @@ generate_ssh_keys() {
     # Also generate RSA key for compatibility
     sudo -u "$username" ssh-keygen -t rsa -b 4096 -f "${ssh_dir}/id_rsa" -N "" -C "${username}@pki-server"
     
-    # Set proper ownership
-    chown -R "${username}:${PKI_GROUP}" "$ssh_dir"
+    # Ensure proper permissions on keys
     chmod 600 "${ssh_dir}/id_ed25519" "${ssh_dir}/id_rsa"
     chmod 644 "${ssh_dir}/id_ed25519.pub" "${ssh_dir}/id_rsa.pub"
     
