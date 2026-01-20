@@ -1332,7 +1332,7 @@ EOF
             rotate_certificates_menu
             ;;
         3)
-            check_all_certs_expiry
+            check_all_certs_expiry || true
             ;;
         4)
             display_cert_summary
