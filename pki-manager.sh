@@ -918,6 +918,12 @@ print_cert_info() {
 display_cert_summary() {
     log_section "Certificate Summary"
     
+    # Check if any certificates exist
+    if [[ ! -f "${PKI_ROOT_DIR}/root-ca.pem" ]]; then
+        log_error "No certificates found. Please install PKI first (option 1)."
+        return 1
+    fi
+    
     echo -e "${BLUE}Root CA:${NC}"
     print_cert_info "${PKI_ROOT_DIR}/root-ca.pem" "Root CA"
     
@@ -1335,7 +1341,7 @@ EOF
             check_all_certs_expiry || true
             ;;
         4)
-            display_cert_summary
+            display_cert_summary || true
             ;;
         5)
             start_cfssl
