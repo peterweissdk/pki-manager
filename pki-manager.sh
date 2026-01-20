@@ -1008,11 +1008,13 @@ check_all_certs_expiry() {
     local warn_days=90
     local critical_days=30
     local has_issues=false
+    local certs_found=0
     
     echo -e "Checking certificates (Warning: <${warn_days} days, Critical: <${critical_days} days)\n"
     
     # Check Root CA
     if [[ -f "${PKI_ROOT_DIR}/root-ca.pem" ]]; then
+        ((certs_found++))
         local days_left
         days_left=$(check_cert_expiry "${PKI_ROOT_DIR}/root-ca.pem")
         local status_color="$GREEN"
@@ -1040,6 +1042,7 @@ check_all_certs_expiry() {
             local cert_file="${int_dir}/${name}.pem"
             
             if [[ -f "$cert_file" ]]; then
+                ((certs_found++))
                 local days_left
                 days_left=$(check_cert_expiry "$cert_file")
                 local status_color="$GREEN"
@@ -1061,7 +1064,10 @@ check_all_certs_expiry() {
     done
     
     echo
-    if $has_issues; then
+    if [[ "$certs_found" -eq 0 ]]; then
+        log_error "No certificates found. Please install PKI first (option 1)."
+        return 1
+    elif $has_issues; then
         log_warn "Some certificates need attention!"
         return 1
     else
