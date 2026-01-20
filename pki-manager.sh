@@ -629,11 +629,11 @@ generate_root_ca() {
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${PKI_ROOT_DIR}:/certs" \
         cfssl/cfssl:latest \
-        cfssl gencert -initca /config/root-ca-csr.json | \
-    docker run --rm -i \
+        gencert -initca /config/root-ca-csr.json | \
+    docker run --rm -i --entrypoint cfssljson \
         -v "${PKI_ROOT_DIR}:/certs" \
         cfssl/cfssl:latest \
-        cfssljson -bare /certs/root-ca
+        -bare /certs/root-ca
     
     # Set restrictive permissions on private key
     chmod 400 "${PKI_ROOT_DIR}/root-ca-key.pem"
@@ -676,11 +676,11 @@ generate_intermediate_ca() {
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssl gencert -initca /config/${name}-csr.json | \
-    docker run --rm -i \
+        gencert -initca /config/${name}-csr.json | \
+    docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssljson -bare /certs/${name}
+        -bare /certs/${name}
     
     # Sign with Root CA
     log_info "Signing ${display_name} with Root CA..."
@@ -690,16 +690,16 @@ generate_intermediate_ca() {
         -v "${PKI_ROOT_DIR}:/root-ca" \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssl sign \
+        sign \
             -ca /root-ca/root-ca.pem \
             -ca-key /root-ca/root-ca-key.pem \
             -config /config/root-ca-config.json \
             -profile intermediate \
             /certs/${name}.csr | \
-    docker run --rm -i \
+    docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssljson -bare /certs/${name}
+        -bare /certs/${name}
     
     # Set permissions
     chmod 400 "${int_dir}/${name}-key.pem"
@@ -789,16 +789,16 @@ EOF
         -v "${PKI_API_DIR}:/certs" \
         -v "${PKI_INTERMEDIATE_DIR}/intermediate-1:/ca" \
         cfssl/cfssl:latest \
-        cfssl gencert \
+        gencert \
             -ca /ca/intermediate-1.pem \
             -ca-key /ca/intermediate-1-key.pem \
             -config /config/intermediate-1-config.json \
             -profile server \
             /config/api-server-csr.json | \
-    docker run --rm -i \
+    docker run --rm -i --entrypoint cfssljson \
         -v "${PKI_API_DIR}:/certs" \
         cfssl/cfssl:latest \
-        cfssljson -bare /certs/api-server
+        -bare /certs/api-server
     
     # Set permissions
     chmod 400 "${PKI_API_DIR}/api-server-key.pem"
@@ -1120,11 +1120,11 @@ rotate_intermediate_cert() {
         -v "${PKI_CONFIG_DIR}:/config" \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssl gencert -initca /config/${name}-csr.json | \
-    docker run --rm -i \
+        gencert -initca /config/${name}-csr.json | \
+    docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssljson -bare /certs/${name}
+        -bare /certs/${name}
     
     # Sign with Root CA
     log_info "Signing with Root CA..."
@@ -1134,16 +1134,16 @@ rotate_intermediate_cert() {
         -v "${PKI_ROOT_DIR}:/root-ca" \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssl sign \
+        sign \
             -ca /root-ca/root-ca.pem \
             -ca-key /root-ca/root-ca-key.pem \
             -config /config/root-ca-config.json \
             -profile intermediate \
             /certs/${name}.csr | \
-    docker run --rm -i \
+    docker run --rm -i --entrypoint cfssljson \
         -v "${int_dir}:/certs" \
         cfssl/cfssl:latest \
-        cfssljson -bare /certs/${name}
+        -bare /certs/${name}
     
     # Set permissions
     chmod 400 "${int_dir}/${name}-key.pem"
