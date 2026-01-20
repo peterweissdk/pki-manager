@@ -863,13 +863,13 @@ services:
     image: cfssl/cfssl:latest
     container_name: cfssl-api
     restart: unless-stopped
+    entrypoint: ["multirootca"]
     ports:
       - "8889:8889"
     volumes:
       - ${PKI_CERTS_DIR}:/certs:ro
       - ${PKI_CONFIG_DIR}:/config:ro
     command: >
-      multirootca
       -a 0.0.0.0:8889
       -roots /config/multiroot-config.ini
       -tls-cert /certs/api/api-server.pem
