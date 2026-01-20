@@ -1311,6 +1311,76 @@ stop_cfssl() {
     fi
 }
 
+# Uninstall PKI Manager
+uninstall_pki() {
+    log_section "Uninstall PKI Manager"
+    
+    # Check if anything is installed
+    if [[ ! -d "$PKI_BASE_DIR" ]]; then
+        log_error "PKI Manager is not installed. Nothing to remove."
+        return 1
+    fi
+    
+    echo "Select uninstall option:"
+    echo
+    echo "  1) Full removal - Remove container and ALL files (including certificates)"
+    echo "  2) Partial removal - Remove container, config, and docker files (keep certificates)"
+    echo "  0) Cancel"
+    echo
+    read -rp "Select an option: " uninstall_choice
+    
+    case "$uninstall_choice" in
+        1)
+            # Full removal
+            log_warn "This will remove ALL PKI files including certificates!"
+            if confirm "Are you sure you want to proceed with FULL removal?"; then
+                # Stop and remove container
+                if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
+                    log_info "Stopping and removing CFSSL container..."
+                    cd "$DOCKER_COMPOSE_DIR"
+                    docker compose down 2>/dev/null || true
+                fi
+                
+                # Remove all PKI directories
+                log_info "Removing all PKI files..."
+                rm -rf "$PKI_BASE_DIR"
+                
+                log_info "Full uninstall complete. All PKI files have been removed."
+            else
+                log_info "Uninstall cancelled."
+            fi
+            ;;
+        2)
+            # Partial removal - keep certs
+            log_warn "This will remove config and docker files but KEEP certificates."
+            if confirm "Are you sure you want to proceed?"; then
+                # Stop and remove container
+                if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
+                    log_info "Stopping and removing CFSSL container..."
+                    cd "$DOCKER_COMPOSE_DIR"
+                    docker compose down 2>/dev/null || true
+                fi
+                
+                # Remove config and docker directories only
+                log_info "Removing config and docker files..."
+                rm -rf "$PKI_CONFIG_DIR"
+                rm -rf "$DOCKER_COMPOSE_DIR"
+                
+                log_info "Partial uninstall complete."
+                log_info "Certificates preserved at: ${PKI_CERTS_DIR}"
+            else
+                log_info "Uninstall cancelled."
+            fi
+            ;;
+        0)
+            log_info "Uninstall cancelled."
+            ;;
+        *)
+            log_error "Invalid option"
+            ;;
+    esac
+}
+
 # Main menu
 main_menu() {
     clear
@@ -1333,6 +1403,7 @@ EOF
     echo "  4) View certificate summary"
     echo "  5) Start/Restart CFSSL services"
     echo "  6) Stop CFSSL services"
+    echo "  7) Uninstall PKI Manager"
     echo "  0) Exit"
     echo
     read -rp "Select an option: " choice
@@ -1355,6 +1426,9 @@ EOF
             ;;
         6)
             stop_cfssl
+            ;;
+        7)
+            uninstall_pki || true
             ;;
         0)
             log_info "Exiting..."
