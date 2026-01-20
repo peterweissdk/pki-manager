@@ -143,9 +143,9 @@ install_ssh() {
     elif command -v pacman &> /dev/null; then
         pacman -S --noconfirm openssh
     elif command -v apk &> /dev/null; then
-        # Alpine Linux
+        # Alpine Linux - shadow package provides groupadd/useradd
         apk update
-        apk add openssh-server
+        apk add openssh-server shadow
     else
         log_error "Unable to detect package manager. Please install OpenSSH manually."
         exit $EXIT_SSH_ERROR
@@ -375,7 +375,11 @@ setup_docker() {
     # Verify Docker is running
     if ! docker info &>/dev/null; then
         log_info "Starting Docker service..."
-        systemctl start docker
+        if command -v systemctl &> /dev/null; then
+            systemctl start docker
+        elif command -v rc-service &> /dev/null; then
+            rc-service docker start
+        fi
     fi
 }
 
