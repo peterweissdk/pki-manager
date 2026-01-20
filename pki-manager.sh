@@ -825,25 +825,20 @@ create_multiroot_config() {
     
     local config_file="${PKI_CONFIG_DIR}/multiroot-config.ini"
     
-    cat > "$config_file" << 'EOF'
-# Multiroot CA Configuration
-# Each section defines a signing identity
-
-EOF
+    # Clear file
+    > "$config_file"
     
     # Add each intermediate as a signer
-    local signer_num=1
     for int_dir in "${PKI_INTERMEDIATE_DIR}"/*; do
         if [[ -d "$int_dir" ]]; then
             local name=$(basename "$int_dir")
             cat >> "$config_file" << EOF
 [${name}]
-private = /certs/intermediate/${name}/${name}-key.pem
+private = file:///certs/intermediate/${name}/${name}-key.pem
 certificate = /certs/intermediate/${name}/${name}.pem
 config = /config/${name}-config.json
 
 EOF
-            signer_num=$((signer_num + 1))
         fi
     done
     
