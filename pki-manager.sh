@@ -873,7 +873,7 @@ services:
       -tls-key /certs/api/api-server-key.pem
       -loglevel 1
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "--no-check-certificate", "https://localhost:8889/api/v1/cfssl/info"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "--no-check-certificate", "--post-data", "{}", "https://localhost:8889/api/v1/cfssl/info"]
       interval: 30s
       timeout: 10s
       retries: 3
