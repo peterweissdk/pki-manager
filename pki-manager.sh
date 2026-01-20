@@ -92,12 +92,14 @@ prompt_password() {
     local password
     local password_confirm
     while true; do
-        read -rsp "$prompt: " password
-        echo
-        read -rsp "Confirm password: " password_confirm
-        echo
-        if [[ "$password" == "$password_confirm" ]]; then
-            echo "$password"
+        read -rsp "$prompt: " password >&2
+        echo >&2
+        read -rsp "Confirm password: " password_confirm >&2
+        echo >&2
+        if [[ -z "$password" ]]; then
+            log_error "Password cannot be empty. Please try again."
+        elif [[ "$password" == "$password_confirm" ]]; then
+            printf '%s' "$password"
             return 0
         else
             log_error "Passwords do not match. Please try again."
