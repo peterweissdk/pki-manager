@@ -80,8 +80,8 @@ Use the `label` parameter to specify which intermediate CA signs your certificat
 
 | Label | Signing CA |
 |-------|------------|
-| `intermediate-1` | Intermediate CA 1 |
-| `intermediate-2` | Intermediate CA 2 |
+| `intermediate_1` | Intermediate CA 1 |
+| `intermediate_2` | Intermediate CA 2 |
 
 ### Using a JSON CSR File
 
@@ -116,7 +116,7 @@ Request certificate using the JSON file:
 ```bash
 curl --cacert ca-bundle.crt \
   -X POST -H "Content-Type: application/json" \
-  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate-1\", \"bundle\": true}" \
+  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate_1\", \"bundle\": true}" \
   https://<server>:8889/api/v1/cfssl/newcert
 ```
 
@@ -142,7 +142,7 @@ curl --cacert ca-bundle.crt \
 # Single API call, extract both cert chain and key
 response=$(curl -s --cacert ca-bundle.crt \
   -X POST -H "Content-Type: application/json" \
-  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate-1\", \"bundle\": true}" \
+  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate_1\", \"bundle\": true}" \
   https://<server>:8889/api/v1/cfssl/newcert)
 
 echo "$response" | jq -r '.result.bundle.bundle' > fullchain.pem

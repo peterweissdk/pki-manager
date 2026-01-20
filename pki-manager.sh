@@ -832,8 +832,10 @@ create_multiroot_config() {
     for int_dir in "${PKI_INTERMEDIATE_DIR}"/*; do
         if [[ -d "$int_dir" ]]; then
             local name=$(basename "$int_dir")
+            # Section names must use underscores (multirootca doesn't allow hyphens)
+            local section_name="${name//-/_}"
             cat >> "$config_file" << EOF
-[${name}]
+[${section_name}]
 private = file:///certs/intermediate/${name}/${name}-key.pem
 certificate = /certs/intermediate/${name}/${name}.pem
 config = /config/${name}-config.json
@@ -953,15 +955,15 @@ display_security_guidance() {
 ║                    IMPORTANT: ROOT CA PRIVATE KEY SECURITY                   ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                              ║
-║  The Root CA private key is the most critical asset in your PKI.            ║
-║  Compromise of this key would allow an attacker to issue trusted            ║
-║  certificates for any domain.                                               ║
+║  The Root CA private key is the most critical asset in your PKI.             ║
+║  Compromise of this key would allow an attacker to issue trusted             ║
+║  certificates for any domain.                                                ║
 ║                                                                              ║
 ║  RECOMMENDED ACTIONS:                                                        ║
 ║                                                                              ║
 ║  1. MOVE TO OFFLINE STORAGE                                                  ║
 ║     - Copy the root CA private key to an encrypted USB drive                 ║
-║     - Use: cp /opt/pki/certs/root/root-ca-key.pem /mnt/usb/                 ║
+║     - Use: cp /opt/pki/certs/root/root-ca-key.pem /mnt/usb/                  ║
 ║     - Securely delete the key from the server after copying                  ║
 ║     - Store the USB drive in a physical safe or secure location              ║
 ║                                                                              ║
@@ -981,7 +983,7 @@ display_security_guidance() {
 ║     - The root CA should remain offline except during signing                ║
 ║                                                                              ║
 ║  5. SECURE DELETION (after backup)                                           ║
-║     - Use: shred -vfz -n 5 /opt/pki/certs/root/root-ca-key.pem             ║
+║     - Use: shred -vfz -n 5 /opt/pki/certs/root/root-ca-key.pem               ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 EOF
@@ -1283,10 +1285,10 @@ install_pki() {
     log_info ""
     log_info "Client usage (after downloading CA bundle via SSH):"
     log_info "  curl --cacert ca-bundle.crt -X POST -H 'Content-Type: application/json' \\"
-    log_info "    -d '{\"request\":{\"CN\":\"example.com\"},\"label\":\"intermediate-1\"}' \\"
+    log_info "    -d '{\"request\":{\"CN\":\"example.com\"},\"label\":\"intermediate_1\"}' \\"
     log_info "    https://<server>:8889/api/v1/cfssl/newcert"
     log_info ""
-    log_info "Available labels: intermediate-1, intermediate-2"
+    log_info "Available labels: intermediate_1, intermediate_2"
 }
 
 # Start or restart CFSSL services
