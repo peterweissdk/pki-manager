@@ -1294,7 +1294,7 @@ stop_cfssl() {
         docker compose down
         log_info "CFSSL services stopped"
     else
-        log_error "Docker Compose file not found."
+        log_error "Docker Compose file not found. Please install PKI first."
     fi
 }
 
