@@ -1161,8 +1161,14 @@ rotate_intermediate_cert() {
 rotate_certificates_menu() {
     log_section "Certificate Rotation"
     
+    # Check if any certificates exist
+    if [[ ! -f "${PKI_ROOT_DIR}/root-ca.pem" ]]; then
+        log_error "No certificates found. Please install PKI first (option 1)."
+        return 1
+    fi
+    
     # First check expiry
-    check_all_certs_expiry
+    check_all_certs_expiry || true
     
     echo
     echo "Available certificates for rotation:"
@@ -1335,7 +1341,7 @@ EOF
             install_pki
             ;;
         2)
-            rotate_certificates_menu
+            rotate_certificates_menu || true
             ;;
         3)
             check_all_certs_expiry || true
