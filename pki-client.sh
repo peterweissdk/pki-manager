@@ -191,27 +191,37 @@ request_certificate() {
     local csr_content
     csr_content=$(cat "$csr_file" | awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}')
     
-    # Make API request
+    # Make API request (don't use -f so we can see error responses)
     local response
-    response=$(curl -sf -k --cacert "${OUTPUT_DIR}/ca-bundle.crt" \
+    local http_code
+    local tmp_file=$(mktemp)
+    
+    http_code=$(curl -s -k --cacert "${OUTPUT_DIR}/ca-bundle.crt" \
+        -w "%{http_code}" \
+        -o "$tmp_file" \
         -X POST -H "Content-Type: application/json" \
         -d "{\"certificate_request\":\"${csr_content}\", \"label\": \"${CA_LABEL}\"}" \
         "https://${PKI_HOST}:${PKI_PORT}/api/v1/cfssl/sign" 2>&1)
     
-    if [[ $? -ne 0 ]]; then
+    response=$(cat "$tmp_file")
+    rm -f "$tmp_file"
+    
+    if [[ "$http_code" != "200" ]]; then
         log_error "Failed to request certificate from PKI server."
+        log_error "HTTP code: ${http_code}"
         log_error "Response: ${response}"
         exit 1
     fi
     
-    # Check for success
+    # Check for success in JSON response
     local success
-    success=$(echo "$response" | jq -r '.success')
+    success=$(echo "$response" | jq -r '.success' 2>/dev/null)
     
     if [[ "$success" != "true" ]]; then
         local error_msg
-        error_msg=$(echo "$response" | jq -r '.errors[0].message // "Unknown error"')
+        error_msg=$(echo "$response" | jq -r '.errors[0].message // "Unknown error"' 2>/dev/null)
         log_error "Certificate request failed: ${error_msg}"
+        log_error "Full response: ${response}"
         exit 1
     fi
     
