@@ -566,9 +566,10 @@ create_intermediate_ca_config() {
     local auth_key
     auth_key=$(openssl rand -hex 32)
     
-    # Save auth key for client use
+    # Save auth key for client use (readable by pki-adm user)
     echo "$auth_key" > "${PKI_CONFIG_DIR}/${name}-auth-key.txt"
-    chmod 600 "${PKI_CONFIG_DIR}/${name}-auth-key.txt"
+    chown "${PKI_USER}:${PKI_USER}" "${PKI_CONFIG_DIR}/${name}-auth-key.txt"
+    chmod 640 "${PKI_CONFIG_DIR}/${name}-auth-key.txt"
     
     cat > "${PKI_CONFIG_DIR}/${name}-config.json" << EOF
 {
