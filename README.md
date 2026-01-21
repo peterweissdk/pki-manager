@@ -53,35 +53,52 @@ sudo ./pki-manager.sh
 
 ### Secure Client Bootstrap
 
-The CFSSL API runs over **HTTPS**. Clients must first download the CA bundle via SSH to establish trust:
+The CFSSL API runs over **HTTPS** with authentication. The easiest way to request certificates is using the client script.
+
+### Using the Client Script (Recommended)
 
 ```bash
-# Step 1: Download CA bundle via SSH (secure, authenticated)
-scp pki-adm@<server>:/opt/pki/certs/api/ca-bundle.crt ./
-
-# Step 2: Request leaf certificate via HTTPS (verified connection)
-curl --cacert ca-bundle.crt \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"request":{"CN":"myserver.example.com","hosts":["myserver.example.com"]}, "bundle": true}' \
-  https://<server>:8889/api/v1/cfssl/newcert
+# Download and run the client script
+./pki-client.sh
 ```
+
+The client script will:
+1. Download the CA bundle via SSH
+2. Download the auth key for the selected intermediate CA
+3. Prompt for certificate details
+4. Generate a private key and CSR locally
+5. Submit the CSR to the PKI server with HMAC authentication
+6. Save the signed certificate and full chain
+
+### Manual Certificate Request
+
+For manual requests, you need to:
+
+1. Download CA bundle and auth key via SSH:
+```bash
+scp pki-adm@<server>:/opt/pki/certs/api/ca-bundle.crt ./
+scp pki-adm@<server>:/opt/pki/config/intermediate-1-auth-key.txt ./
+```
+
+2. Generate CSR locally with openssl
+3. Create HMAC token and submit to `/api/v1/cfssl/authsign`
 
 ### API Endpoint
 
 | Endpoint | Protocol | Port | Purpose |
 |----------|----------|------|---------|
-| Multiroot CA | HTTPS | 8889 | Certificate issuance |
+| Multiroot CA | HTTPS | 8889 | Certificate issuance (authsign) |
 
-The API uses `multirootca` and supports the `label` parameter to choose which intermediate CA signs the certificate.
+The API uses `multirootca` with the `/api/v1/cfssl/authsign` endpoint. All requests require HMAC authentication.
 
 ### Choosing the Signing CA
 
 Use the `label` parameter to specify which intermediate CA signs your certificate:
 
-| Label | Signing CA |
-|-------|------------|
-| `intermediate_1` | Intermediate CA 1 |
-| `intermediate_2` | Intermediate CA 2 |
+| Label | Signing CA | Auth Key File |
+|-------|------------|---------------|
+| `intermediate_1` | Intermediate CA 1 | `intermediate-1-auth-key.txt` |
+| `intermediate_2` | Intermediate CA 2 | `intermediate-2-auth-key.txt` |
 
 ### Using a JSON CSR File
 

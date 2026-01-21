@@ -46,6 +46,10 @@ check_requirements() {
         missing+=("jq")
     fi
     
+    if ! command -v xxd &> /dev/null; then
+        missing+=("xxd")
+    fi
+    
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing required tools: ${missing[*]}"
         log_error "Please install them and try again."
@@ -70,10 +74,12 @@ get_server_info() {
     PKI_PORT="${input:-$PKI_PORT}"
     
     read -rp "Which intermediate CA to use? (1 or 2) [1]: " input
-    CA_LABEL="intermediate_${input:-1}"
+    CA_NUM="${input:-1}"
+    CA_LABEL="intermediate_${CA_NUM}"
+    CA_NAME="intermediate-${CA_NUM}"
 }
 
-# Download CA bundle
+# Download CA bundle and auth key
 download_ca_bundle() {
     log_info "Downloading CA bundle from ${PKI_HOST}..."
     
@@ -81,16 +87,32 @@ download_ca_bundle() {
         read -rp "CA bundle already exists. Overwrite? [y/N]: " overwrite
         if [[ ! "$overwrite" =~ ^[Yy]$ ]]; then
             log_info "Using existing CA bundle."
-            return 0
+        else
+            if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/certs/api/ca-bundle.crt" "${OUTPUT_DIR}/"; then
+                log_error "Failed to download CA bundle. Check SSH access."
+                exit 1
+            fi
+        fi
+    else
+        if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/certs/api/ca-bundle.crt" "${OUTPUT_DIR}/"; then
+            log_error "Failed to download CA bundle. Check SSH access."
+            exit 1
         fi
     fi
     
-    if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/certs/api/ca-bundle.crt" "${OUTPUT_DIR}/"; then
-        log_error "Failed to download CA bundle. Check SSH access."
+    log_info "CA bundle downloaded successfully."
+    
+    # Download auth key for the selected intermediate CA
+    log_info "Downloading auth key for ${CA_LABEL}..."
+    
+    if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/config/${CA_NAME}-auth-key.txt" "${OUTPUT_DIR}/.auth-key.txt"; then
+        log_error "Failed to download auth key. Check SSH access."
         exit 1
     fi
+    chmod 600 "${OUTPUT_DIR}/.auth-key.txt"
+    AUTH_KEY=$(cat "${OUTPUT_DIR}/.auth-key.txt")
     
-    log_info "CA bundle downloaded successfully."
+    log_info "Auth key downloaded successfully."
 }
 
 # Get certificate subject details
@@ -191,7 +213,20 @@ request_certificate() {
     local csr_content
     csr_content=$(cat "$csr_file" | awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}')
     
-    # Make API request (don't use -f so we can see error responses)
+    # Build the inner request JSON
+    local inner_request="{\"certificate_request\":\"${csr_content}\",\"label\":\"${CA_LABEL}\",\"profile\":\"server\"}"
+    
+    # Create HMAC token for authentication
+    # The token is base64(HMAC-SHA256(request, key))
+    local auth_key_bytes
+    auth_key_bytes=$(echo -n "$AUTH_KEY" | xxd -r -p)
+    local token
+    token=$(echo -n "$inner_request" | openssl dgst -sha256 -hmac "$auth_key_bytes" -binary | base64)
+    
+    # Build authenticated request
+    local auth_request="{\"token\":\"${token}\",\"request\":${inner_request}}"
+    
+    # Make API request to authsign endpoint
     local response
     local http_code
     local tmp_file=$(mktemp)
@@ -200,8 +235,8 @@ request_certificate() {
         -w "%{http_code}" \
         -o "$tmp_file" \
         -X POST -H "Content-Type: application/json" \
-        -d "{\"certificate_request\":\"${csr_content}\", \"label\": \"${CA_LABEL}\"}" \
-        "https://${PKI_HOST}:${PKI_PORT}/api/v1/cfssl/sign" 2>&1)
+        -d "$auth_request" \
+        "https://${PKI_HOST}:${PKI_PORT}/api/v1/cfssl/authsign" 2>&1)
     
     response=$(cat "$tmp_file")
     rm -f "$tmp_file"

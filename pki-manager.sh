@@ -562,11 +562,20 @@ EOF
 create_intermediate_ca_config() {
     local name="$1"
     
+    # Generate auth key for this intermediate (32 bytes hex = 64 chars)
+    local auth_key
+    auth_key=$(openssl rand -hex 32)
+    
+    # Save auth key for client use
+    echo "$auth_key" > "${PKI_CONFIG_DIR}/${name}-auth-key.txt"
+    chmod 600 "${PKI_CONFIG_DIR}/${name}-auth-key.txt"
+    
     cat > "${PKI_CONFIG_DIR}/${name}-config.json" << EOF
 {
     "signing": {
         "default": {
-            "expiry": "8760h"
+            "expiry": "8760h",
+            "auth_key": "primary"
         },
         "profiles": {
             "server": {
@@ -576,7 +585,8 @@ create_intermediate_ca_config() {
                     "key encipherment",
                     "server auth"
                 ],
-                "expiry": "8760h"
+                "expiry": "8760h",
+                "auth_key": "primary"
             },
             "client": {
                 "usages": [
@@ -585,7 +595,8 @@ create_intermediate_ca_config() {
                     "key encipherment",
                     "client auth"
                 ],
-                "expiry": "8760h"
+                "expiry": "8760h",
+                "auth_key": "primary"
             },
             "peer": {
                 "usages": [
@@ -595,13 +606,21 @@ create_intermediate_ca_config() {
                     "server auth",
                     "client auth"
                 ],
-                "expiry": "8760h"
+                "expiry": "8760h",
+                "auth_key": "primary"
             }
+        }
+    },
+    "auth_keys": {
+        "primary": {
+            "type": "standard",
+            "key": "${auth_key}"
         }
     }
 }
 EOF
     log_info "Intermediate CA signing config created at ${PKI_CONFIG_DIR}/${name}-config.json"
+    log_info "Auth key saved to ${PKI_CONFIG_DIR}/${name}-auth-key.txt"
 }
 
 # Generate Root CA certificate
@@ -1276,17 +1295,18 @@ install_pki() {
     log_info "  - Configuration: ${PKI_CONFIG_DIR}"
     log_info "  - Docker Compose: ${DOCKER_COMPOSE_DIR}"
     log_info ""
-    log_info "SSH access for CA bundle download:"
+    log_info "SSH access for certificate requests:"
     log_info "  - User: ${PKI_USER}"
-    log_info "  - Download: scp ${PKI_USER}@<server>:${PKI_API_DIR}/ca-bundle.crt ./"
+    log_info "  - CA bundle: scp ${PKI_USER}@<server>:${PKI_API_DIR}/ca-bundle.crt ./"
+    log_info "  - Auth keys: ${PKI_CONFIG_DIR}/intermediate-1-auth-key.txt"
+    log_info "               ${PKI_CONFIG_DIR}/intermediate-2-auth-key.txt"
     log_info ""
-    log_info "CFSSL API endpoint (multirootca with HTTPS):"
-    log_info "  - https://localhost:8889"
+    log_info "CFSSL API endpoint (multirootca with HTTPS + auth):"
+    log_info "  - https://localhost:8889/api/v1/cfssl/authsign"
     log_info ""
-    log_info "Client usage (after downloading CA bundle via SSH):"
-    log_info "  curl --cacert ca-bundle.crt -X POST -H 'Content-Type: application/json' \\"
-    log_info "    -d '{\"request\":{\"CN\":\"example.com\"},\"label\":\"intermediate_1\"}' \\"
-    log_info "    https://<server>:8889/api/v1/cfssl/newcert"
+    log_info "Client usage (recommended):"
+    log_info "  Use the pki-client.sh script to request certificates."
+    log_info "  It handles auth key download and HMAC token generation."
     log_info ""
     log_info "Available labels: intermediate_1, intermediate_2"
 }
