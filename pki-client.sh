@@ -46,10 +46,6 @@ check_requirements() {
         missing+=("jq")
     fi
     
-    if ! command -v xxd &> /dev/null; then
-        missing+=("xxd")
-    fi
-    
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing required tools: ${missing[*]}"
         log_error "Please install them and try again."
@@ -216,15 +212,17 @@ request_certificate() {
     # Build the inner request JSON
     local inner_request="{\"certificate_request\":\"${csr_content}\",\"label\":\"${CA_LABEL}\",\"profile\":\"server\"}"
     
-    # Create HMAC token for authentication
-    # The token is base64(HMAC-SHA256(request, key))
-    local auth_key_bytes
-    auth_key_bytes=$(echo -n "$AUTH_KEY" | xxd -r -p)
-    local token
-    token=$(echo -n "$inner_request" | openssl dgst -sha256 -hmac "$auth_key_bytes" -binary | base64)
+    # Base64 encode the inner request (authsign expects request as base64-encoded bytes)
+    local inner_request_b64
+    inner_request_b64=$(echo -n "$inner_request" | base64 | tr -d '\n')
     
-    # Build authenticated request
-    local auth_request="{\"token\":\"${token}\",\"request\":${inner_request}}"
+    # Create HMAC token for authentication
+    # The token is base64(HMAC-SHA256(base64_request, key))
+    local token
+    token=$(echo -n "$inner_request_b64" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:${AUTH_KEY}" -binary | base64 | tr -d '\n')
+    
+    # Build authenticated request (request field is base64-encoded JSON)
+    local auth_request="{\"token\":\"${token}\",\"request\":\"${inner_request_b64}\"}"
     
     # Make API request to authsign endpoint
     local response
