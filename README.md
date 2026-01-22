@@ -2,7 +2,12 @@
 
 # 💾 PKI Manager
 
-**Cloudflare SSL - CFSSL Certificate Authority Server** — Bash script for setting up and managing a PKI (Public Key Infrastructure) and TLS Certificate Authority server using the CFSSL toolkit.
+[![Static Badge](https://img.shields.io/badge/Cloudflare-CFSSL-white?style=flat&logo=cloudflare&logoColor=white&logoSize=auto&labelColor=black)](https://github.com/cloudflare/cfssl)
+[![Static Badge](https://img.shields.io/badge/Docker-Compose-white?style=flat&logo=docker&logoColor=white&logoSize=auto&labelColor=black)](https://docker.com/)
+[![Static Badge](https://img.shields.io/badge/Linux-white?style=flat&logo=linux&logoColor=white&logoSize=auto&labelColor=black)](https://www.linux.org/)
+[![Static Badge](https://img.shields.io/badge/GPL-V3-white?style=flat&logo=gnu&logoColor=white&logoSize=auto&labelColor=black)](https://www.gnu.org/licenses/gpl-3.0.en.html/)
+
+**Cloudflare SSL (CFSSL) Certificate Authority Server** — Bash script for setting up and managing a PKI (Public Key Infrastructure) and TLS Certificate Authority server using the CFSSL toolkit.
 
 ---
 
@@ -39,6 +44,10 @@ The CFSSL API runs over **HTTPS** with authentication. The easiest way to reques
 # Download and run the client script
 ./pki-client.sh
 ```
+
+---
+
+## 🔧 Configuration
 
 ### Manual Certificate Request
 
@@ -135,10 +144,6 @@ response=$(curl -s --cacert ca-bundle.crt \
 echo "$response" | jq -r '.result.bundle.bundle' > fullchain.pem
 echo "$response" | jq -r '.result.private_key' > privkey.pem
 ```
-
----
-
-## 🔧 Configuration
 
 ### Certificate Details Prompted
 
