@@ -2,17 +2,7 @@
 
 # 💾 PKI Manager
 
-**CFSSL Certificate Authority Server** — A comprehensive bash script for setting up and managing a PKI (Public Key Infrastructure) and TLS Certificate Authority server using the CFSSL toolkit.
-
-| Feature | Description |
-|---------|-------------|
-| Root CA Generation | Configurable RSA key sizes (2048-8192 bits) |
-| Intermediate CAs | 2 intermediate CAs for day-to-day issuance |
-| CFSSL API Server | Docker-based multirootca with HTTPS API |
-| SSH Access | Dedicated `pki-adm` user for secure CA bundle download |
-| Certificate Rotation | Built-in rotation for expiring certificates |
-| Expiry Monitoring | Color-coded expiry warnings |
-| Secure Bootstrap | SSH-based CA distribution for trusted HTTPS access |
+**Cloudflare SSL - CFSSL Certificate Authority Server** — Bash script for setting up and managing a PKI (Public Key Infrastructure) and TLS Certificate Authority server using the CFSSL toolkit.
 
 ---
 
@@ -39,18 +29,6 @@ chmod +x pki-manager.sh
 sudo ./pki-manager.sh
 ```
 
-### Menu Options
-
-| Option | Action |
-|--------|--------|
-| 1 | Install PKI and TLS CA server |
-| 2 | Rotate certificates |
-| 3 | Check certificate expiry |
-| 4 | View certificate summary |
-| 5 | Start/Restart CFSSL services |
-| 6 | Stop CFSSL services |
-| 0 | Exit |
-
 ### Secure Client Bootstrap
 
 The CFSSL API runs over **HTTPS** with authentication. The easiest way to request certificates is using the client script.
@@ -61,14 +39,6 @@ The CFSSL API runs over **HTTPS** with authentication. The easiest way to reques
 # Download and run the client script
 ./pki-client.sh
 ```
-
-The client script will:
-1. Download the CA bundle via SSH
-2. Download the auth key for the selected intermediate CA
-3. Prompt for certificate details
-4. Generate a private key and CSR locally
-5. Submit the CSR to the PKI server with HMAC authentication
-6. Save the signed certificate and full chain
 
 ### Manual Certificate Request
 
@@ -231,15 +201,6 @@ During installation, you'll be prompted for:
 └── docker/
     └── docker-compose.yml
 ```
-
-### File Permissions
-
-| File Type | Permission | Description |
-|-----------|------------|-------------|
-| Private keys | `400` | Read-only, owner only |
-| Certificates | `644` | Readable by all |
-| Config files | `640` | Owner read/write, group read |
-| API directory | `755` | Readable for SSH download |
 
 ---
 
