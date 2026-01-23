@@ -143,7 +143,6 @@ install_ssh() {
     elif command -v pacman &> /dev/null; then
         pacman -S --noconfirm openssh
     elif command -v apk &> /dev/null; then
-        # Alpine Linux
         apk update
         apk add openssh-server
     else
@@ -1026,14 +1025,41 @@ check_cert_expiry() {
         return 1
     fi
     
-    local expiry_date
-    expiry_date=$(openssl x509 -in "$cert_file" -noout -enddate 2>/dev/null | cut -d= -f2)
-    local expiry_epoch
-    expiry_epoch=$(date -d "$expiry_date" +%s 2>/dev/null)
+    # Get expiry date and calculate days left
+    # Use openssl to check if cert expires within a large window, then binary search for exact days
     local now_epoch
     now_epoch=$(date +%s)
-    local days_left
-    days_left=$(( (expiry_epoch - now_epoch) / 86400 ))
+    
+    # Get the certificate end date in a portable way
+    # openssl x509 -checkend returns 0 if cert is valid for N seconds, 1 if it expires sooner
+    local days_left=0
+    local check_days
+    
+    # Check in increments to find approximate expiry
+    for check_days in 3650 1825 730 365 180 90 60 30 14 7 1; do
+        local check_seconds=$((check_days * 86400))
+        if openssl x509 -in "$cert_file" -checkend "$check_seconds" &>/dev/null; then
+            days_left=$check_days
+            break
+        fi
+    done
+    
+    # Refine the result if we found a range
+    if [[ $days_left -gt 0 ]]; then
+        # Binary search for more precision between days_left and the next lower check
+        local low=0
+        local high=$days_left
+        while [[ $((high - low)) -gt 1 ]]; do
+            local mid=$(( (low + high) / 2 ))
+            local mid_seconds=$((mid * 86400))
+            if openssl x509 -in "$cert_file" -checkend "$mid_seconds" &>/dev/null; then
+                low=$mid
+            else
+                high=$mid
+            fi
+        done
+        days_left=$low
+    fi
     
     echo "$days_left"
 }
