@@ -997,49 +997,36 @@ EOF
 # Check certificate expiry
 check_cert_expiry() {
     local cert_file="$1"
-    local warn_days="${2:-30}"
     
     if [[ ! -f "$cert_file" ]]; then
         return 1
     fi
     
-    # Get expiry date and calculate days left
-    # Use openssl to check if cert expires within a large window, then binary search for exact days
-    local now_epoch
-    now_epoch=$(date +%s)
+    # Use binary search with openssl x509 -checkend
+    # -checkend N returns 0 if cert is valid for at least N more seconds, 1 otherwise
+    local low=0
+    local high=7300  # ~20 years max
     
-    # Get the certificate end date in a portable way
-    # openssl x509 -checkend returns 0 if cert is valid for N seconds, 1 if it expires sooner
-    local days_left=0
-    local check_days
+    # First check if cert is already expired
+    if ! openssl x509 -in "$cert_file" -checkend 0 &>/dev/null; then
+        echo "0"
+        return
+    fi
     
-    # Check in increments to find approximate expiry
-    for check_days in 3650 1825 730 365 180 90 60 30 14 7 1; do
-        local check_seconds=$((check_days * 86400))
-        if openssl x509 -in "$cert_file" -checkend "$check_seconds" &>/dev/null; then
-            days_left=$check_days
-            break
+    # Binary search to find exact days left
+    while [[ $((high - low)) -gt 1 ]]; do
+        local mid=$(( (low + high) / 2 ))
+        local mid_seconds=$((mid * 86400))
+        if openssl x509 -in "$cert_file" -checkend "$mid_seconds" &>/dev/null; then
+            # Cert is valid for at least mid days, search higher
+            low=$mid
+        else
+            # Cert expires before mid days, search lower
+            high=$mid
         fi
     done
     
-    # Refine the result if we found a range
-    if [[ $days_left -gt 0 ]]; then
-        # Binary search for more precision between days_left and the next lower check
-        local low=0
-        local high=$days_left
-        while [[ $((high - low)) -gt 1 ]]; do
-            local mid=$(( (low + high) / 2 ))
-            local mid_seconds=$((mid * 86400))
-            if openssl x509 -in "$cert_file" -checkend "$mid_seconds" &>/dev/null; then
-                low=$mid
-            else
-                high=$mid
-            fi
-        done
-        days_left=$low
-    fi
-    
-    echo "$days_left"
+    echo "$low"
 }
 
 # Check all certificates expiry
