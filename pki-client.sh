@@ -77,38 +77,35 @@ get_server_info() {
 
 # Download CA bundle and auth key
 download_ca_bundle() {
-    log_info "Downloading CA bundle from ${PKI_HOST}..."
+    local need_download=true
     
-    if [[ -f "${OUTPUT_DIR}/ca-bundle.crt" ]]; then
-        read -rp "CA bundle already exists. Overwrite? [y/N]: " overwrite
+    if [[ -f "${OUTPUT_DIR}/ca-bundle.crt" ]] && [[ -f "${OUTPUT_DIR}/.auth-key.txt" ]]; then
+        read -rp "CA bundle and auth key already exist. Overwrite? [y/N]: " overwrite
         if [[ ! "$overwrite" =~ ^[Yy]$ ]]; then
-            log_info "Using existing CA bundle."
-        else
-            if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/certs/api/ca-bundle.crt" "${OUTPUT_DIR}/"; then
-                log_error "Failed to download CA bundle. Check SSH access."
-                exit 1
-            fi
+            log_info "Using existing CA bundle and auth key."
+            AUTH_KEY=$(cat "${OUTPUT_DIR}/.auth-key.txt")
+            need_download=false
         fi
-    else
-        if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/certs/api/ca-bundle.crt" "${OUTPUT_DIR}/"; then
-            log_error "Failed to download CA bundle. Check SSH access."
+    fi
+    
+    if [[ "$need_download" == "true" ]]; then
+        log_info "Downloading CA bundle and auth key from ${PKI_HOST}..."
+        
+        # Download both files in a single SCP command (one password prompt)
+        if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/certs/api/ca-bundle.crt" \
+                 "${PKI_USER}@${PKI_HOST}:/opt/pki/config/${CA_NAME}-auth-key.txt" \
+                 "${OUTPUT_DIR}/"; then
+            log_error "Failed to download files. Check SSH access."
             exit 1
         fi
+        
+        # Rename auth key to hidden file
+        mv "${OUTPUT_DIR}/${CA_NAME}-auth-key.txt" "${OUTPUT_DIR}/.auth-key.txt"
+        chmod 600 "${OUTPUT_DIR}/.auth-key.txt"
+        AUTH_KEY=$(cat "${OUTPUT_DIR}/.auth-key.txt")
+        
+        log_info "CA bundle and auth key downloaded successfully."
     fi
-    
-    log_info "CA bundle downloaded successfully."
-    
-    # Download auth key for the selected intermediate CA
-    log_info "Downloading auth key for ${CA_LABEL}..."
-    
-    if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/config/${CA_NAME}-auth-key.txt" "${OUTPUT_DIR}/.auth-key.txt"; then
-        log_error "Failed to download auth key. Check SSH access."
-        exit 1
-    fi
-    chmod 600 "${OUTPUT_DIR}/.auth-key.txt"
-    AUTH_KEY=$(cat "${OUTPUT_DIR}/.auth-key.txt")
-    
-    log_info "Auth key downloaded successfully."
 }
 
 # Get certificate subject details
