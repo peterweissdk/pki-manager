@@ -141,14 +141,18 @@ get_cert_details() {
     
     read -rp "Output filename prefix [${CERT_CN}]: " OUTPUT_PREFIX
     OUTPUT_PREFIX="${OUTPUT_PREFIX:-$CERT_CN}"
+    
+    # Create output directory named after the CN
+    CERT_OUTPUT_DIR="${OUTPUT_DIR}/${CERT_CN}"
+    mkdir -p "$CERT_OUTPUT_DIR"
 }
 
 # Generate CSR locally
 generate_csr() {
     log_info "Generating private key and CSR..."
     
-    local key_file="${OUTPUT_DIR}/${OUTPUT_PREFIX}.key"
-    local csr_file="${OUTPUT_DIR}/${OUTPUT_PREFIX}.csr"
+    local key_file="${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.key"
+    local csr_file="${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.csr"
     
     # Build subject string
     local subject="/CN=${CERT_CN}"
@@ -198,9 +202,9 @@ generate_csr() {
 request_certificate() {
     log_info "Requesting certificate from PKI server..."
     
-    local csr_file="${OUTPUT_DIR}/${OUTPUT_PREFIX}.csr"
-    local cert_file="${OUTPUT_DIR}/${OUTPUT_PREFIX}.crt"
-    local chain_file="${OUTPUT_DIR}/${OUTPUT_PREFIX}-chain.crt"
+    local csr_file="${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.csr"
+    local cert_file="${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.crt"
+    local chain_file="${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}-chain.crt"
     
     # Read CSR and escape for JSON
     local csr_content
@@ -270,21 +274,21 @@ display_summary() {
     echo
     log_info "Certificate request complete!"
     echo
-    echo "Generated files:"
-    echo "  - Private key:  ${OUTPUT_DIR}/${OUTPUT_PREFIX}.key"
-    echo "  - Certificate:  ${OUTPUT_DIR}/${OUTPUT_PREFIX}.crt"
-    echo "  - Full chain:   ${OUTPUT_DIR}/${OUTPUT_PREFIX}-chain.crt"
+    echo "Generated files in ${CERT_OUTPUT_DIR}/:"
+    echo "  - Private key:  ${OUTPUT_PREFIX}.key"
+    echo "  - Certificate:  ${OUTPUT_PREFIX}.crt"
+    echo "  - Full chain:   ${OUTPUT_PREFIX}-chain.crt"
     echo "  - CA bundle:    ${OUTPUT_DIR}/ca-bundle.crt"
     echo
     echo "Usage examples:"
     echo "  # Nginx"
-    echo "  ssl_certificate     ${OUTPUT_PREFIX}-chain.crt;"
-    echo "  ssl_certificate_key ${OUTPUT_PREFIX}.key;"
+    echo "  ssl_certificate     ${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}-chain.crt;"
+    echo "  ssl_certificate_key ${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.key;"
     echo
     echo "  # Apache"
-    echo "  SSLCertificateFile    ${OUTPUT_PREFIX}.crt"
-    echo "  SSLCertificateKeyFile ${OUTPUT_PREFIX}.key"
-    echo "  SSLCACertificateFile  ca-bundle.crt"
+    echo "  SSLCertificateFile    ${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.crt"
+    echo "  SSLCertificateKeyFile ${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.key"
+    echo "  SSLCACertificateFile  ${OUTPUT_DIR}/ca-bundle.crt"
     echo
 }
 
