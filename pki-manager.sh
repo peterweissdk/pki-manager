@@ -143,9 +143,9 @@ install_ssh() {
     elif command -v pacman &> /dev/null; then
         pacman -S --noconfirm openssh
     elif command -v apk &> /dev/null; then
-        # Alpine Linux - shadow package provides groupadd/useradd
+        # Alpine Linux
         apk update
-        apk add openssh-server shadow
+        apk add openssh-server
     else
         log_error "Unable to detect package manager. Please install OpenSSH manually."
         exit $EXIT_SSH_ERROR
@@ -182,6 +182,14 @@ user_has_ssh_keys() {
 # Setup PKI admin user
 setup_pki_user() {
     log_section "Setting up PKI Admin User"
+    
+    # Install shadow package on Alpine (provides useradd, groupadd, chpasswd)
+    if command -v apk &> /dev/null; then
+        if ! command -v useradd &> /dev/null; then
+            log_info "Installing shadow package for user management..."
+            apk add --no-cache shadow
+        fi
+    fi
     
     # Check if user already exists
     if user_exists "$PKI_USER"; then
