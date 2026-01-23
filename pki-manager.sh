@@ -757,7 +757,9 @@ generate_api_server_cert() {
     local api_hostname
     api_hostname=$(hostname -f 2>/dev/null || hostname)
     local api_ip
-    api_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
+    # Get primary IP address (portable across Debian/Ubuntu and Alpine)
+    api_ip=$(ip -4 addr show scope global 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1 | head -1)
+    [[ -z "$api_ip" ]] && api_ip="127.0.0.1"
     
     log_info "Generating certificate for API server..."
     log_info "  Hostname: ${api_hostname}"
