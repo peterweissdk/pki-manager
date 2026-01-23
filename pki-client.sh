@@ -212,16 +212,16 @@ request_certificate() {
     # Build the inner request JSON
     local inner_request="{\"certificate_request\":\"${csr_content}\",\"label\":\"${CA_LABEL}\",\"profile\":\"server\"}"
     
-    # Base64 encode the inner request (authsign expects request as base64-encoded bytes)
+    # Base64 encode the inner request for JSON transport (Go's []byte is base64 in JSON)
     local inner_request_b64
     inner_request_b64=$(echo -n "$inner_request" | base64 | tr -d '\n')
     
     # Create HMAC token for authentication
-    # The token is base64(HMAC-SHA256(base64_request, key))
+    # HMAC is computed over the RAW request bytes (before base64), then base64 encoded for JSON
     local token
-    token=$(echo -n "$inner_request_b64" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:${AUTH_KEY}" -binary | base64 | tr -d '\n')
+    token=$(echo -n "$inner_request" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:${AUTH_KEY}" -binary | base64 | tr -d '\n')
     
-    # Build authenticated request (request field is base64-encoded JSON)
+    # Build authenticated request (both token and request are base64-encoded for JSON []byte fields)
     local auth_request="{\"token\":\"${token}\",\"request\":\"${inner_request_b64}\"}"
     
     # Make API request to authsign endpoint
