@@ -1235,9 +1235,36 @@ rotate_certificates_menu() {
     fi
 }
 
+# Check and install openssl if needed
+check_openssl() {
+    if ! command -v openssl &> /dev/null; then
+        log_info "OpenSSL not found. Installing..."
+        if command -v apk &> /dev/null; then
+            # Alpine Linux
+            apk add --no-cache openssl
+        elif command -v apt-get &> /dev/null; then
+            # Debian/Ubuntu
+            apt-get update && apt-get install -y openssl
+        elif command -v dnf &> /dev/null; then
+            # Fedora/RHEL
+            dnf install -y openssl
+        elif command -v yum &> /dev/null; then
+            # CentOS/older RHEL
+            yum install -y openssl
+        else
+            log_error "Could not install openssl. Please install it manually."
+            exit 1
+        fi
+        log_info "OpenSSL installed successfully."
+    fi
+}
+
 # Install PKI infrastructure
 install_pki() {
     log_section "Installing PKI and TLS Certificate Authority Server"
+    
+    # Check and install openssl
+    check_openssl
     
     # Setup SSH
     setup_ssh
