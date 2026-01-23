@@ -136,12 +136,6 @@ install_ssh() {
     log_info "Installing OpenSSH server..."
     if command -v apt-get &> /dev/null; then
         apt-get update && apt-get install -y openssh-server
-    elif command -v dnf &> /dev/null; then
-        dnf install -y openssh-server
-    elif command -v yum &> /dev/null; then
-        yum install -y openssh-server
-    elif command -v pacman &> /dev/null; then
-        pacman -S --noconfirm openssh
     elif command -v apk &> /dev/null; then
         apk update
         apk add openssh-server
@@ -311,22 +305,6 @@ install_docker() {
         
         apt-get update
         apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-        
-    elif command -v dnf &> /dev/null; then
-        # Fedora/RHEL
-        dnf -y install dnf-plugins-core
-        dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-        dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-        
-    elif command -v yum &> /dev/null; then
-        # CentOS
-        yum install -y yum-utils
-        yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-        yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-        
-    elif command -v pacman &> /dev/null; then
-        # Arch Linux
-        pacman -Sy --noconfirm docker docker-compose
         
     elif command -v apk &> /dev/null; then
         # Alpine Linux
@@ -1274,17 +1252,9 @@ check_openssl() {
     if ! command -v openssl &> /dev/null; then
         log_info "OpenSSL not found. Installing..."
         if command -v apk &> /dev/null; then
-            # Alpine Linux
             apk add --no-cache openssl
         elif command -v apt-get &> /dev/null; then
-            # Debian/Ubuntu
             apt-get update && apt-get install -y openssl
-        elif command -v dnf &> /dev/null; then
-            # Fedora/RHEL
-            dnf install -y openssl
-        elif command -v yum &> /dev/null; then
-            # CentOS/older RHEL
-            yum install -y openssl
         else
             log_error "Could not install openssl. Please install it manually."
             exit 1
