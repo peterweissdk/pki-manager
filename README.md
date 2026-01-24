@@ -49,7 +49,7 @@ The CFSSL API runs over **HTTPS** with authentication. The easiest way to reques
 
 ### Using pki-client-cli.sh (Automated/Scripted)
 
-The `pki-client-cli.sh` script is designed for automated certificate management without user interaction. It uses an environment file for configuration.
+The `pki-client-cli.sh` script is designed for automating certificate requests, to use in scripts or cron jobs. It uses an environment file for configuration.
 
 #### Prerequisites
 
@@ -159,7 +159,7 @@ echo "Certificate expires in ${days_left} days"
 │                      ROOT CA                            │
 │              Validity: 10 years                         │
 │              Path Length: 2                             │
-│              ⚠️ Keep offline after setup                │
+│              ⚠️ Keep private key offline after setup    │
 └─────────────────────┬───────────────────────────────────┘
                       │
           ┌───────────┴───────────┐
@@ -181,23 +181,6 @@ echo "Certificate expires in ${days_left} days"
 │    peer)            │ │    peer)            │
 └─────────────────────┘ └─────────────────────┘
 ```
-
-### Certificate Validity
-
-| Type | Validity | Path Length | Purpose |
-|------|----------|-------------|---------|
-| Root CA | 10 years | 2 | Trust anchor |
-| Intermediate CA | 8 years | 1 | Issue leaf certs |
-| Server/Client | 1 year | 0 | End-entity |
-
-### Signing Profiles
-
-| Profile | Key Usages | Purpose |
-|---------|------------|---------|
-| `intermediate` | cert sign, crl sign | Sign leaf certificates |
-| `server` | digital signature, key encipherment, server auth | TLS servers |
-| `client` | digital signature, key encipherment, client auth | TLS clients |
-| `peer` | digital signature, key encipherment, server auth, client auth | Mutual TLS |
 
 ### Root CA Security
 
