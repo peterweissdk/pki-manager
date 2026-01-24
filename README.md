@@ -112,39 +112,42 @@ echo "Certificate expires in ${days_left} days"
 ## 📝 Directory Structure
 
 ```
-/opt/pki/
-├── certs/
-│   ├── root/
-│   │   ├── root-ca.pem              # Root CA certificate
-│   │   ├── root-ca-key.pem          # Root CA private key ⚠️
-│   │   └── root-ca.csr
-│   ├── intermediate/
-│   │   ├── intermediate-1/
-│   │   │   ├── intermediate-1.pem
+/opt/pki
+├── certs
+│   ├── api
+│   │   ├── api-server-key.pem
+│   │   ├── api-server.csr
+│   │   ├── api-server.pem
+│   │   └── ca-bundle.crt
+│   ├── bundle
+│   │   ├── ca-bundle.crt
+│   │   ├── intermediate-1-bundle.pem
+│   │   └── intermediate-2-bundle.pem
+│   ├── intermediate
+│   │   ├── intermediate-1
 │   │   │   ├── intermediate-1-key.pem
-│   │   │   └── intermediate-1.csr
-│   │   └── intermediate-2/
-│   │       ├── intermediate-2.pem
+│   │   │   ├── intermediate-1.csr
+│   │   │   └── intermediate-1.pem
+│   │   └── intermediate-2
 │   │       ├── intermediate-2-key.pem
-│   │       └── intermediate-2.csr
-│   ├── api/
-│   │   ├── api-server.pem           # HTTPS API server cert
-│   │   ├── api-server-key.pem       # HTTPS API server key
-│   │   └── ca-bundle.crt            # CA bundle for client download
-│   └── bundle/
-│       ├── intermediate-1-bundle.pem
-│       ├── intermediate-2-bundle.pem
-│       └── ca-bundle.crt
-├── config/
-│   ├── root-ca-csr.json
-│   ├── root-ca-config.json
+│   │       ├── intermediate-2.csr
+│   │       └── intermediate-2.pem
+│   └── root
+│       ├── root-ca-key.pem          # ⚠️ Keep offline after setup
+│       ├── root-ca.csr
+│       └── root-ca.pem
+├── config
 │   ├── api-server-csr.json
-│   ├── intermediate-1-csr.json
+│   ├── intermediate-1-auth-key.txt
 │   ├── intermediate-1-config.json
-│   ├── intermediate-2-csr.json
+│   ├── intermediate-1-csr.json
+│   ├── intermediate-2-auth-key.txt
 │   ├── intermediate-2-config.json
-│   └── multiroot-config.ini
-└── docker/
+│   ├── intermediate-2-csr.json
+│   ├── multiroot-config.ini
+│   ├── root-ca-config.json
+│   └── root-ca-csr.json
+└── docker
     └── docker-compose.yml
 ```
 
