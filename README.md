@@ -41,7 +41,7 @@ The CFSSL API runs over **HTTPS** with authentication. The easiest way to reques
 ### Using the Client Script (Recommended)
 
 ```bash
-# Download and run the client script
+# The client script is included when cloning the repository
 ./pki-client.sh
 ```
 
@@ -49,122 +49,69 @@ The CFSSL API runs over **HTTPS** with authentication. The easiest way to reques
 
 ## 🔧 Configuration
 
-### Manual Certificate Request
+### Using pki-client-cli.sh (Automated/Scripted)
 
-For manual requests, you need to:
+The `pki-client-cli.sh` script is designed for automated certificate management without user interaction. It uses an environment file for configuration.
 
-1. Download CA bundle and auth key via SSH:
+#### Prerequisites
+
+1. Download CA bundle and auth key from the PKI server:
 ```bash
-scp pki-adm@<server>:/opt/pki/certs/api/ca-bundle.crt ./
-scp pki-adm@<server>:/opt/pki/config/intermediate-1-auth-key.txt ./
+scp pki-adm@<pki-server>:/opt/pki/certs/api/ca-bundle.crt /etc/pki/
+scp pki-adm@<pki-server>:/opt/pki/config/intermediate-1-auth-key.txt /etc/pki/
+# Or for intermediate CA 2:
+scp pki-adm@<pki-server>:/opt/pki/config/intermediate-2-auth-key.txt /etc/pki/
 ```
 
-2. Generate CSR locally with openssl
-3. Create HMAC token and submit to `/api/v1/cfssl/authsign`
-
-### API Endpoint
-
-| Endpoint | Protocol | Port | Purpose |
-|----------|----------|------|---------|
-| Multiroot CA | HTTPS | 8889 | Certificate issuance (authsign) |
-
-The API uses `multirootca` with the `/api/v1/cfssl/authsign` endpoint. All requests require HMAC authentication.
-
-### Choosing the Signing CA
-
-Use the `label` parameter to specify which intermediate CA signs your certificate:
-
-| Label | Signing CA | Auth Key File |
-|-------|------------|---------------|
-| `intermediate_1` | Intermediate CA 1 | `intermediate-1-auth-key.txt` |
-| `intermediate_2` | Intermediate CA 2 | `intermediate-2-auth-key.txt` |
-
-### Using a JSON CSR File
-
-Create a CSR JSON file with all certificate options:
-
-```json
-{
-  "CN": "myserver.example.com",
-  "hosts": [
-    "myserver.example.com",
-    "myserver",
-    "192.168.1.100"
-  ],
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "ST": "California",
-      "L": "San Francisco",
-      "O": "My Company",
-      "OU": "IT Department"
-    }
-  ]
-}
+2. Create an environment file (copy from `pki-cert-manager.env.example`):
+```bash
+cp pki-cert-manager.env.example /etc/pki/myserver.env
 ```
 
-Request certificate using the JSON file:
+3. Edit the environment file with your certificate details:
+```bash
+# Required settings
+PKI_HOST="192.168.1.40"
+PKI_PORT="8888"
+CA_NUM="1"
+CA_BUNDLE_PATH="/etc/pki/ca-bundle.crt"
+AUTH_KEY_PATH="/etc/pki/intermediate-1-auth-key.txt"
+CERT_CN="myserver.example.com"
+CERT_DIR="/etc/ssl/certs/myserver.example.com"
+
+# Optional settings
+CERT_HOSTS="www.example.com,192.168.1.100"
+CERT_O="My Company"
+KEY_ALGO="rsa"
+KEY_SIZE="2048"
+```
+
+#### Usage
 
 ```bash
-curl --cacert ca-bundle.crt \
-  -X POST -H "Content-Type: application/json" \
-  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate_1\", \"bundle\": true}" \
-  https://<server>:8889/api/v1/cfssl/newcert
+# Request new certificate (use -f to force if exists)
+./pki-client-cli.sh -e /etc/pki/myserver.env -n
+
+# Check certificate expiry
+./pki-client-cli.sh -c /path/to/certificate.crt
+
+# Renew certificate (only if < 90 days remaining, or -f to force)
+./pki-client-cli.sh -e /etc/pki/myserver.env -r
 ```
 
-### CSR JSON Options
-
-| Field | Description | Example |
-|-------|-------------|---------|
-| `CN` | Common Name | `myserver.example.com` |
-| `hosts` | SANs (DNS names, IPs) | `["example.com", "10.0.0.1"]` |
-| `key.algo` | Key algorithm | `rsa`, `ecdsa` |
-| `key.size` | Key size | `2048`, `4096` (RSA), `256`, `384` (ECDSA) |
-| `names[].C` | Country | `US` |
-| `names[].ST` | State | `California` |
-| `names[].L` | Locality | `San Francisco` |
-| `names[].O` | Organization | `My Company` |
-| `names[].OU` | Organizational Unit | `IT Department` |
-
-> **Note**: Leaf certificate key algorithm and size are independent of the intermediate CA. You can use ECDSA leaf certs even if the intermediate uses RSA.
-
-### Extract Certificate and Key
+#### Scripting Example
 
 ```bash
-# Single API call, extract both cert chain and key
-response=$(curl -s --cacert ca-bundle.crt \
-  -X POST -H "Content-Type: application/json" \
-  -d "{\"request\":$(cat csr.json), \"label\": \"intermediate_1\", \"bundle\": true}" \
-  https://<server>:8889/api/v1/cfssl/newcert)
+# Check expiry and capture days remaining
+days_left=$(./pki-client-cli.sh -c /etc/ssl/certs/myserver/myserver.crt)
+exit_code=$?
 
-echo "$response" | jq -r '.result.bundle.bundle' > fullchain.pem
-echo "$response" | jq -r '.result.private_key' > privkey.pem
+echo "Certificate expires in ${days_left} days"
+
+if [[ $days_left -lt 30 ]]; then
+    echo "WARNING: Certificate expires soon!"
+fi
 ```
-
-### Certificate Details Prompted
-
-During installation, you'll be prompted for:
-
-| Field | Description | Example |
-|-------|-------------|---------|
-| CN | Common Name | My Root CA |
-| C | Country | US |
-| L | Locality | San Francisco |
-| O | Organization | My Company |
-| ST | State | California |
-
-### RSA Key Size
-
-| Size | Security Level | Use Case |
-|------|----------------|----------|
-| 2048 | Minimum | Legacy compatibility |
-| 3072 | Good | General purpose |
-| 4096 | Strong (default) | Recommended |
-| 8192 | Maximum | High security |
 
 ---
 

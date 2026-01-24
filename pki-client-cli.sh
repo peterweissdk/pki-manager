@@ -60,13 +60,13 @@ log() {
         echo "$log_entry" >> "$LOG_FILE" 2>/dev/null || true
     fi
     
-    # Output to console if verbose or error
+    # Output to console if verbose or error (all to stderr to keep stdout clean for scripting)
     if [[ "$VERBOSE" == "true" ]] || [[ "$level" == "ERROR" ]]; then
         case "$level" in
             ERROR) echo -e "\033[0;31m${log_entry}\033[0m" >&2 ;;
-            WARN)  echo -e "\033[0;33m${log_entry}\033[0m" ;;
-            INFO)  echo -e "\033[0;32m${log_entry}\033[0m" ;;
-            *)     echo "$log_entry" ;;
+            WARN)  echo -e "\033[0;33m${log_entry}\033[0m" >&2 ;;
+            INFO)  echo -e "\033[0;32m${log_entry}\033[0m" >&2 ;;
+            *)     echo "$log_entry" >&2 ;;
         esac
     fi
 }
@@ -86,9 +86,9 @@ Usage: $(basename "$0") [-e <env-file>] [-c <cert-file>|-n|-r] [-f] [-v] [-h]
 Automated PKI Certificate Management Script
 
 Download ca-bundle.crt and auth-key.txt from the PKI server and place them in /etc/pki/
-scp user[pki-admin]@pki-server:/opt/pki/certs/api/ca-bundle.crt /etc/pki/
-scp user[pki-admin]@pki-server:/opt/pki/config/intermediate-1-auth-key.txt /etc/pki/
-scp user[pki-admin]@pki-server:/opt/pki/config/intermediate-2-auth-key.txt /etc/pki/
+  scp user[pki-admin]@pki-server:/opt/pki/certs/api/ca-bundle.crt /etc/pki/
+  scp user[pki-admin]@pki-server:/opt/pki/config/intermediate-1-auth-key.txt /etc/pki/
+  scp user[pki-admin]@pki-server:/opt/pki/config/intermediate-2-auth-key.txt /etc/pki/
 
 Options:
   -e <file>   Environment file with certificate configuration (required for -n and -r)
