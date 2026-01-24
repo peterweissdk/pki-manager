@@ -300,8 +300,10 @@ check_expiry() {
     log_info "Days until expiry: ${days_left}"
     log_info "Status: ${status}"
     
-    # Also output to stdout for scripting
-    echo "${days_left}"
+    # Output days to stdout only when not verbose (for scripting)
+    if [[ "$VERBOSE" != "true" ]]; then
+        echo "${days_left}"
+    fi
     
     exit $exit_code
 }
