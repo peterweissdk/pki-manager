@@ -1,5 +1,3 @@
-## ALPHA RELEASE
-
 # 💾 PKI Manager
 
 [![Static Badge](https://img.shields.io/badge/Cloudflare-CFSSL-white?style=flat&logo=cloudflare&logoColor=white&logoSize=auto&labelColor=black)](https://github.com/cloudflare/cfssl)
