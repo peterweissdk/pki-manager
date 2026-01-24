@@ -86,8 +86,9 @@ Usage: $(basename "$0") [-e <env-file>] [-c <cert-file>|-n|-r] [-f] [-v] [-h]
 Automated PKI Certificate Management Script
 
 Download ca-bundle.crt and auth-key.txt from the PKI server and place them in /etc/pki/
-scp user@pki-server:/etc/pki/ca-bundle.crt /etc/pki/
-scp user@pki-server:/etc/pki/.auth-key.txt /etc/pki/
+scp user[pki-admin]@pki-server:/opt/pki/certs/api/ca-bundle.crt /etc/pki/
+scp user[pki-admin]@pki-server:/opt/pki/config/intermediate-1-auth-key.txt /etc/pki/
+scp user[pki-admin]@pki-server:/opt/pki/config/intermediate-2-auth-key.txt /etc/pki/
 
 Options:
   -e <file>   Environment file with certificate configuration (required for -n and -r)
