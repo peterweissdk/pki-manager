@@ -281,6 +281,9 @@ request_certificate() {
     # Create full chain (cert + CA bundle)
     cat "$cert_file" "${OUTPUT_DIR}/ca-bundle.crt" > "$chain_file"
     
+    # Copy CA bundle to cert directory
+    cp "${OUTPUT_DIR}/ca-bundle.crt" "${CERT_OUTPUT_DIR}/ca-bundle.crt"
+    
     log_info "Certificate saved to: ${cert_file}"
     log_info "Full chain saved to: ${chain_file}"
 }
@@ -292,9 +295,10 @@ display_summary() {
     echo
     echo "Generated files in ${CERT_OUTPUT_DIR}/:"
     echo "  - Private key:  ${OUTPUT_PREFIX}.key"
+    echo "  - CSR:          ${OUTPUT_PREFIX}.csr"
     echo "  - Certificate:  ${OUTPUT_PREFIX}.crt"
     echo "  - Full chain:   ${OUTPUT_PREFIX}-chain.crt"
-    echo "  - CA bundle:    ${OUTPUT_DIR}/ca-bundle.crt"
+    echo "  - CA bundle:    ca-bundle.crt"
     echo
     echo "Usage examples:"
     echo "  # Nginx"
@@ -304,7 +308,7 @@ display_summary() {
     echo "  # Apache"
     echo "  SSLCertificateFile    ${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.crt"
     echo "  SSLCertificateKeyFile ${CERT_OUTPUT_DIR}/${OUTPUT_PREFIX}.key"
-    echo "  SSLCACertificateFile  ${OUTPUT_DIR}/ca-bundle.crt"
+    echo "  SSLCACertificateFile  ${CERT_OUTPUT_DIR}/ca-bundle.crt"
     echo
 }
 
