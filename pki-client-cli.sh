@@ -570,7 +570,6 @@ main() {
     
     # For check action, we don't need the env file
     if [[ "$ACTION" == "check" ]]; then
-        VERBOSE=true  # Always show output for check
         check_expiry
     else
         load_env_file
