@@ -42,6 +42,7 @@ FORCE=false
 ACTION=""
 ENV_FILE=""
 LOG_FILE=""
+CHECK_CERT_FILE=""
 
 # =============================================================================
 # Logging Functions
@@ -80,7 +81,7 @@ log_debug() { [[ "$VERBOSE" == "true" ]] && log "DEBUG" "$@" || true; }
 # =============================================================================
 usage() {
     cat << EOF
-Usage: $(basename "$0") -e <env-file> [-c|-n|-r] [-f] [-v] [-h]
+Usage: $(basename "$0") [-e <env-file>] [-c <cert-file>|-n|-r] [-f] [-v] [-h]
 
 Automated PKI Certificate Management Script
 
@@ -89,8 +90,8 @@ scp user@pki-server:/etc/pki/ca-bundle.crt /etc/pki/
 scp user@pki-server:/etc/pki/.auth-key.txt /etc/pki/
 
 Options:
-  -e <file>   Environment file with certificate configuration (required)
-  -c          Check certificate expiry date
+  -e <file>   Environment file with certificate configuration (required for -n and -r)
+  -c <file>   Check certificate expiry date (specify path to .crt file)
   -n          Request new certificate
   -r          Renew certificate (only if < ${DEFAULT_RENEW_THRESHOLD} days remaining)
   -f          Force mode:
@@ -131,9 +132,9 @@ Environment File Variables:
   CERT_DIR          - Directory for certificate files
 
 Example:
+  $(basename "$0") -c /etc/ssl/certs/myserver/myserver.crt
   $(basename "$0") -e /etc/pki/myserver.env -n -v
-  $(basename "$0") -e /etc/pki/myserver.env -c
-  $(basename "$0") -e /etc/pki/myserver.env -r
+  $(basename "$0") -e /etc/pki/myserver.env -r -f
 
 EOF
     exit $EXIT_SUCCESS
@@ -271,7 +272,7 @@ get_cert_days_left() {
 }
 
 check_expiry() {
-    local cert_file="${CERT_DIR}/${OUTPUT_PREFIX}.crt"
+    local cert_file="$CHECK_CERT_FILE"
     
     if [[ ! -f "$cert_file" ]]; then
         log_error "Certificate not found: ${cert_file}"
@@ -525,10 +526,10 @@ renew_certificate() {
 # Argument Parsing
 # =============================================================================
 parse_args() {
-    while getopts ":e:cnrfvh" opt; do
+    while getopts ":e:c:nrfvh" opt; do
         case $opt in
             e) ENV_FILE="$OPTARG" ;;
-            c) ACTION="check" ;;
+            c) ACTION="check"; CHECK_CERT_FILE="$OPTARG" ;;
             n) ACTION="new" ;;
             r) ACTION="renew" ;;
             f) FORCE=true ;;
@@ -547,8 +548,14 @@ parse_args() {
     
     # Validate action is specified
     if [[ -z "$ACTION" ]]; then
-        echo "Error: No action specified. Use -c, -n, or -r" >&2
+        echo "Error: No action specified. Use -c <cert-file>, -n, or -r" >&2
         echo "Use -h for help" >&2
+        exit $EXIT_ERROR
+    fi
+    
+    # Validate env file is provided for new/renew actions
+    if [[ "$ACTION" != "check" ]] && [[ -z "$ENV_FILE" ]]; then
+        echo "Error: Environment file required for -n or -r. Use -e <file>" >&2
         exit $EXIT_ERROR
     fi
 }
@@ -559,16 +566,21 @@ parse_args() {
 main() {
     parse_args "$@"
     check_dependencies
-    load_env_file
-    validate_config
     
-    log_info "Starting pki-cert-manager (action: ${ACTION}, force: ${FORCE})"
-    
-    case "$ACTION" in
-        check) check_expiry ;;
-        new)   new_certificate ;;
-        renew) renew_certificate ;;
-    esac
+    # For check action, we don't need the env file
+    if [[ "$ACTION" == "check" ]]; then
+        VERBOSE=true  # Always show output for check
+        check_expiry
+    else
+        load_env_file
+        validate_config
+        log_info "Starting pki-cert-manager (action: ${ACTION}, force: ${FORCE})"
+        
+        case "$ACTION" in
+            new)   new_certificate ;;
+            renew) renew_certificate ;;
+        esac
+    fi
 }
 
 main "$@"
