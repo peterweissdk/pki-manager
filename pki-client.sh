@@ -228,17 +228,33 @@ request_certificate() {
     # Make API request to authsign endpoint
     local response
     local http_code
+    local curl_exit_code
     local tmp_file=$(mktemp)
     
     http_code=$(curl -s -k --cacert "${OUTPUT_DIR}/ca-bundle.crt" \
+        --connect-timeout 10 \
+        --max-time 30 \
         -w "%{http_code}" \
         -o "$tmp_file" \
         -X POST -H "Content-Type: application/json" \
         -d "$auth_request" \
         "https://${PKI_HOST}:${PKI_PORT}/api/v1/cfssl/authsign" 2>&1)
+    curl_exit_code=$?
     
     response=$(cat "$tmp_file")
     rm -f "$tmp_file"
+    
+    # Check if curl failed (connection error, timeout, etc.)
+    if [[ $curl_exit_code -ne 0 ]]; then
+        log_error "Failed to connect to PKI server at ${PKI_HOST}:${PKI_PORT}"
+        case $curl_exit_code in
+            6)  log_error "Could not resolve host." ;;
+            7)  log_error "Failed to connect to host." ;;
+            28) log_error "Connection timed out." ;;
+            *)  log_error "Curl error code: ${curl_exit_code}" ;;
+        esac
+        exit 1
+    fi
     
     if [[ "$http_code" != "200" ]]; then
         log_error "Failed to request certificate from PKI server."
