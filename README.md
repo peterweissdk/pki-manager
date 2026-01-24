@@ -92,7 +92,7 @@ KEY_SIZE="2048"
 # Request new certificate (use -f to force if exists)
 ./pki-client-cli.sh -e /etc/pki/myserver.env -n
 
-# Check certificate expiry
+# Check certificate expiry (outputs days remaining to stdout)
 ./pki-client-cli.sh -c /path/to/certificate.crt
 
 # Renew certificate (only if < 90 days remaining, or -f to force)
@@ -107,10 +107,6 @@ days_left=$(./pki-client-cli.sh -c /etc/ssl/certs/myserver/myserver.crt)
 exit_code=$?
 
 echo "Certificate expires in ${days_left} days"
-
-if [[ $days_left -lt 30 ]]; then
-    echo "WARNING: Certificate expires soon!"
-fi
 ```
 
 ---
