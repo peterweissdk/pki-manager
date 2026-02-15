@@ -61,27 +61,29 @@ scp pki-adm@<pki-server>:/opt/pki/config/intermediate-1-auth-key.txt /etc/pki/
 scp pki-adm@<pki-server>:/opt/pki/config/intermediate-2-auth-key.txt /etc/pki/
 ```
 
-2. Create an environment file (copy from `pki-cert-manager.env.example`):
+2. Create an environment file (copy from `pki-client-cli.env.example`):
 ```bash
-cp pki-cert-manager.env.example /etc/pki/myserver.env
+cp pki-client-cli.env.example /etc/pki/myserver.env
 ```
 
 3. Edit the environment file with your certificate details:
 ```bash
 # Required settings
 PKI_HOST="192.168.1.40"
-PKI_PORT="8888"
+PKI_PORT="8889"
 CA_NUM="1"
-CA_BUNDLE_PATH="/etc/pki/ca-bundle.crt"
 AUTH_KEY_PATH="/etc/pki/intermediate-1-auth-key.txt"
-CERT_CN="myserver.example.com"
-CERT_DIR="/etc/ssl/certs/myserver.example.com"
-
-# Optional settings
-CERT_HOSTS="www.example.com,192.168.1.100"
-CERT_O="My Company"
 KEY_ALGO="rsa"
 KEY_SIZE="2048"
+OUTPUT_PREFIX="myserver.example.com"CERT_CN="myserver.example.com"
+CA_BUNDLE_PATH="/etc/pki/ca-bundle.crt"
+LOG_FILE="/var/log/pki-cert-manager.log"CERT_DIR="/etc/ssl/certs/myserver.example.com"
+CERT_HOSTS="www.example.com,192.168.1.100"
+CERT_O="My Company"
+CERT_OU="IT Department"
+CERT_C="DK"
+CERT_ST="Capital Region"
+CERT_L="Copenhagen"
 ```
 
 #### Usage
