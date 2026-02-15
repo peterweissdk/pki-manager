@@ -68,16 +68,21 @@ cp pki-client-cli.env.example /etc/pki/myserver.env
 
 3. Edit the environment file with your certificate details:
 ```bash
-# Required settings
+# PKI server settings
 PKI_HOST="192.168.1.40"
 PKI_PORT="8889"
 CA_NUM="1"
-AUTH_KEY_PATH="/etc/pki/intermediate-1-auth-key.txt"
+# Key settings
 KEY_ALGO="rsa"
 KEY_SIZE="2048"
-OUTPUT_PREFIX="myserver.example.com"CERT_CN="myserver.example.com"
+# File paths
+AUTH_KEY_PATH="/etc/pki/intermediate-1-auth-key.txt"
+OUTPUT_PREFIX="myserver.example.com"
 CA_BUNDLE_PATH="/etc/pki/ca-bundle.crt"
-LOG_FILE="/var/log/pki-cert-manager.log"CERT_DIR="/etc/ssl/certs/myserver.example.com"
+LOG_FILE="/var/log/pki-cert-manager.log"
+CERT_DIR="/etc/ssl/certs/myserver.example.com"
+# Certificate Subject
+CERT_CN="myserver.example.com"
 CERT_HOSTS="www.example.com,192.168.1.100"
 CERT_O="My Company"
 CERT_OU="IT Department"
