@@ -89,20 +89,26 @@ prompt_input() {
 # Prompt for password (hidden input)
 prompt_password() {
     local prompt="$1"
-    local password
-    local password_confirm
+    local password=""
+    local password_confirm=""
     while true; do
         read -rsp "$prompt: " password >&2
         echo >&2
-        read -rsp "Confirm password: " password_confirm >&2
-        echo >&2
         if [[ -z "$password" ]]; then
             log_error "Password cannot be empty. Please try again."
-        elif [[ "$password" == "$password_confirm" ]]; then
+            echo >&2
+            continue
+        fi
+        read -rsp "Confirm password: " password_confirm >&2
+        echo >&2
+        if [[ "$password" == "$password_confirm" ]]; then
             printf '%s' "$password"
             return 0
         else
             log_error "Passwords do not match. Please try again."
+            echo >&2
+            password=""
+            password_confirm=""
         fi
     done
 }
@@ -1366,8 +1372,8 @@ uninstall_pki() {
     
     echo "Select uninstall option:"
     echo
-    echo "  1) Full removal - Remove container, ALL files, and pki-adm user"
-    echo "  2) Partial removal - Remove container, config, docker files, and pki-adm user (keep certificates)"
+    echo "  1) Full removal - Remove container and ALL files (including certificates)"
+    echo "  2) Partial removal - Remove container, config, and docker files (keep certificates)"
     echo "  0) Cancel"
     echo
     read -rp "Select an option: " uninstall_choice
@@ -1375,7 +1381,7 @@ uninstall_pki() {
     case "$uninstall_choice" in
         1)
             # Full removal
-            log_warn "This will remove ALL PKI files including certificates and pki-adm user!"
+            log_warn "This will remove ALL PKI files including certificates!"
             if confirm "Are you sure you want to proceed with FULL removal?"; then
                 # Stop and remove container
                 if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
@@ -1388,25 +1394,14 @@ uninstall_pki() {
                 log_info "Removing all PKI files..."
                 rm -rf "$PKI_BASE_DIR"
                 
-                # Remove pki-adm user and home directory
-                if id "$PKI_USER" &>/dev/null; then
-                    log_info "Removing pki-adm user and home directory..."
-                    userdel -r "$PKI_USER" 2>/dev/null || true
-                fi
-                
-                # Remove pki group if it exists and has no members
-                if getent group "$PKI_GROUP" &>/dev/null; then
-                    groupdel "$PKI_GROUP" 2>/dev/null || true
-                fi
-                
-                log_info "Full uninstall complete. All PKI files and pki-adm user have been removed."
+                log_info "Full uninstall complete. All PKI files have been removed."
             else
                 log_info "Uninstall cancelled."
             fi
             ;;
         2)
             # Partial removal - keep certs
-            log_warn "This will remove config, docker files, and pki-adm user but KEEP certificates."
+            log_warn "This will remove config and docker files but KEEP certificates."
             if confirm "Are you sure you want to proceed?"; then
                 # Stop and remove container
                 if [[ -f "${DOCKER_COMPOSE_DIR}/docker-compose.yml" ]]; then
@@ -1420,18 +1415,7 @@ uninstall_pki() {
                 rm -rf "$PKI_CONFIG_DIR"
                 rm -rf "$DOCKER_COMPOSE_DIR"
                 
-                # Remove pki-adm user and home directory
-                if id "$PKI_USER" &>/dev/null; then
-                    log_info "Removing pki-adm user and home directory..."
-                    userdel -r "$PKI_USER" 2>/dev/null || true
-                fi
-                
-                # Remove pki group if it exists and has no members
-                if getent group "$PKI_GROUP" &>/dev/null; then
-                    groupdel "$PKI_GROUP" 2>/dev/null || true
-                fi
-                
-                log_info "Partial uninstall complete. pki-adm user has been removed."
+                log_info "Partial uninstall complete."
                 log_info "Certificates preserved at: ${PKI_CERTS_DIR}"
             else
                 log_info "Uninstall cancelled."
