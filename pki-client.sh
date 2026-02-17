@@ -314,6 +314,7 @@ display_summary() {
 
 # Main
 main() {
+    clear
     echo -e "${BLUE}"
     cat << 'EOF'
   ____  _  _____    ____ _ _            _   
