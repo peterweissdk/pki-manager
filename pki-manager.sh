@@ -95,8 +95,7 @@ prompt_password() {
         read -rsp "$prompt: " password >&2
         echo >&2
         if [[ -z "$password" ]]; then
-            log_error "Password cannot be empty. Please try again."
-            echo >&2
+            echo -e "${RED}[ERROR]${NC} Password cannot be empty. Please try again." >&2
             continue
         fi
         read -rsp "Confirm password: " password_confirm >&2
@@ -105,10 +104,7 @@ prompt_password() {
             printf '%s' "$password"
             return 0
         else
-            log_error "Passwords do not match. Please try again."
-            echo >&2
-            password=""
-            password_confirm=""
+            echo -e "${RED}[ERROR]${NC} Passwords do not match. Please try again." >&2
         fi
     done
 }
