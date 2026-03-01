@@ -337,6 +337,12 @@ generate_csr() {
         done
     fi
     
+    # Build extension arguments array
+    local -a ext_args=()
+    [[ -n "$san_ext" ]] && ext_args+=("-addext" "$san_ext")
+    [[ -n "${KEY_USAGE:-}" ]] && ext_args+=("-addext" "keyUsage=${KEY_USAGE}")
+    [[ -n "${EXT_KEY_USAGE:-}" ]] && ext_args+=("-addext" "extendedKeyUsage=${EXT_KEY_USAGE}")
+    
     # Generate key and CSR
     if [[ "$KEY_ALGO" == "rsa" ]]; then
         openssl genrsa -out "$key_file" "$KEY_SIZE" 2>/dev/null
@@ -347,9 +353,9 @@ generate_csr() {
         openssl ecparam -genkey -name "$curve" -out "$key_file" 2>/dev/null
     fi
     
-    if [[ -n "$san_ext" ]]; then
+    if [[ ${#ext_args[@]} -gt 0 ]]; then
         openssl req -new -key "$key_file" -out "$csr_file" -subj "$subject" \
-            -addext "$san_ext" 2>/dev/null
+            "${ext_args[@]}" 2>/dev/null
     else
         openssl req -new -key "$key_file" -out "$csr_file" -subj "$subject" 2>/dev/null
     fi
