@@ -72,15 +72,21 @@ cp pki-client-cli.env.example /etc/pki/myserver.env
 PKI_HOST="192.168.1.40"
 PKI_PORT="8889"
 CA_NUM="1"
+
 # Key settings
 KEY_ALGO="rsa"
 KEY_SIZE="2048"
+
+# Certificate profile (server, client, or peer)
+CERT_PROFILE="server"
+
 # File paths
 AUTH_KEY_PATH="/etc/pki/intermediate-1-auth-key.txt"
-OUTPUT_PREFIX="myserver.example.com"
 CA_BUNDLE_PATH="/etc/pki/ca-bundle.crt"
 LOG_FILE="/var/log/pki-cert-manager.log"
 CERT_DIR="/etc/ssl/certs/myserver.example.com"
+OUTPUT_PREFIX="myserver.example.com"
+
 # Certificate Subject
 CERT_CN="myserver.example.com"
 CERT_HOSTS="www.example.com,192.168.1.100"
