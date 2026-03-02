@@ -340,8 +340,6 @@ generate_csr() {
     # Build extension arguments array
     local -a ext_args=()
     [[ -n "$san_ext" ]] && ext_args+=("-addext" "$san_ext")
-    [[ -n "${KEY_USAGE:-}" ]] && ext_args+=("-addext" "keyUsage=${KEY_USAGE}")
-    [[ -n "${EXT_KEY_USAGE:-}" ]] && ext_args+=("-addext" "extendedKeyUsage=${EXT_KEY_USAGE}")
     
     # Generate key and CSR
     if [[ "$KEY_ALGO" == "rsa" ]]; then
@@ -381,8 +379,9 @@ request_certificate() {
     local auth_key
     auth_key=$(cat "$AUTH_KEY_PATH")
     
-    # Build the inner request JSON
-    local inner_request="{\"certificate_request\":\"${csr_content}\",\"label\":\"${CA_LABEL}\",\"profile\":\"server\"}"
+    # Build the inner request JSON (use CERT_PROFILE or default to "server")
+    local profile="${CERT_PROFILE:-server}"
+    local inner_request="{\"certificate_request\":\"${csr_content}\",\"label\":\"${CA_LABEL}\",\"profile\":\"${profile}\"}"
     
     # Base64 encode the inner request
     local inner_request_b64

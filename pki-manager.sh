@@ -480,6 +480,7 @@ create_root_ca_config() {
                 "usages": [
                     "signing",
                     "digital signature",
+                    "content commitment",
                     "key encipherment",
                     "server auth"
                 ],
@@ -489,6 +490,7 @@ create_root_ca_config() {
                 "usages": [
                     "signing",
                     "digital signature",
+                    "content commitment",
                     "key encipherment",
                     "client auth"
                 ],
@@ -498,6 +500,7 @@ create_root_ca_config() {
                 "usages": [
                     "signing",
                     "digital signature",
+                    "content commitment",
                     "key encipherment",
                     "server auth",
                     "client auth"
