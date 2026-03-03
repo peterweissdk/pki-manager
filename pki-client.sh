@@ -114,6 +114,19 @@ get_cert_details() {
     log_info "Enter certificate details:"
     echo
     
+    echo "Certificate profile:"
+    echo "  1) server - TLS server certificate (serverAuth)"
+    echo "  2) client - TLS client certificate (clientAuth)"
+    echo "  3) peer   - Mutual TLS certificate (serverAuth + clientAuth)"
+    read -rp "Select profile [1]: " profile_choice
+    case "${profile_choice:-1}" in
+        1) CERT_PROFILE="server" ;;
+        2) CERT_PROFILE="client" ;;
+        3) CERT_PROFILE="peer" ;;
+        *) CERT_PROFILE="server" ;;
+    esac
+    echo
+    
     read -rp "Common Name (CN) - e.g., myserver.example.com: " CERT_CN
     if [[ -z "$CERT_CN" ]]; then
         log_error "Common Name is required."
@@ -210,8 +223,8 @@ request_certificate() {
     local csr_content
     csr_content=$(cat "$csr_file" | awk 'NF {sub(/\r/, ""); printf "%s\\n",$0;}')
     
-    # Build the inner request JSON
-    local inner_request="{\"certificate_request\":\"${csr_content}\",\"label\":\"${CA_LABEL}\",\"profile\":\"server\"}"
+    # Build the inner request JSON (use selected profile)
+    local inner_request="{\"certificate_request\":\"${csr_content}\",\"label\":\"${CA_LABEL}\",\"profile\":\"${CERT_PROFILE}\"}"
     
     # Base64 encode the inner request for JSON transport (Go's []byte is base64 in JSON)
     local inner_request_b64
