@@ -78,18 +78,19 @@ get_server_info() {
 # Download CA bundle and auth key
 download_ca_bundle() {
     local need_download=true
+    local auth_key_file="${OUTPUT_DIR}/.auth-key-${CA_NUM}.txt"
     
-    if [[ -f "${OUTPUT_DIR}/ca-bundle.crt" ]] && [[ -f "${OUTPUT_DIR}/.auth-key.txt" ]]; then
-        read -rp "CA bundle and auth key already exist. Overwrite? [y/N]: " overwrite
+    if [[ -f "${OUTPUT_DIR}/ca-bundle.crt" ]] && [[ -f "$auth_key_file" ]]; then
+        read -rp "CA bundle and auth key for intermediate ${CA_NUM} already exist. Overwrite? [y/N]: " overwrite
         if [[ ! "$overwrite" =~ ^[Yy]$ ]]; then
-            log_info "Using existing CA bundle and auth key."
-            AUTH_KEY=$(cat "${OUTPUT_DIR}/.auth-key.txt")
+            log_info "Using existing CA bundle and auth key for intermediate ${CA_NUM}."
+            AUTH_KEY=$(cat "$auth_key_file")
             need_download=false
         fi
     fi
     
     if [[ "$need_download" == "true" ]]; then
-        log_info "Downloading CA bundle and auth key from ${PKI_HOST}..."
+        log_info "Downloading CA bundle and auth key for intermediate ${CA_NUM} from ${PKI_HOST}..."
         
         # Download both files in a single SCP command (one password prompt)
         if ! scp "${PKI_USER}@${PKI_HOST}:/opt/pki/certs/api/ca-bundle.crt" \
@@ -99,10 +100,10 @@ download_ca_bundle() {
             exit 1
         fi
         
-        # Rename auth key to hidden file
-        mv "${OUTPUT_DIR}/${CA_NAME}-auth-key.txt" "${OUTPUT_DIR}/.auth-key.txt"
-        chmod 600 "${OUTPUT_DIR}/.auth-key.txt"
-        AUTH_KEY=$(cat "${OUTPUT_DIR}/.auth-key.txt")
+        # Rename auth key to CA-specific hidden file
+        mv "${OUTPUT_DIR}/${CA_NAME}-auth-key.txt" "$auth_key_file"
+        chmod 600 "$auth_key_file"
+        AUTH_KEY=$(cat "$auth_key_file")
         
         log_info "CA bundle and auth key downloaded successfully."
     fi
