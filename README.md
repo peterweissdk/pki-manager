@@ -120,6 +120,26 @@ exit_code=$?
 echo "Certificate expires in ${days_left} days"
 ```
 
+#### Certificate Profiles
+
+The `CERT_PROFILE` setting determines the certificate's Extended Key Usage (EKU):
+
+| Profile | keyUsage | extendedKeyUsage | Use Case |
+|---------|----------|------------------|----------|
+| **server** | digitalSignature, keyEncipherment | serverAuth | Standard TLS servers (HTTPS, API endpoints) |
+| **client** | digitalSignature, keyEncipherment | clientAuth | Client authentication to servers |
+| **peer** | digitalSignature, keyEncipherment | serverAuth, clientAuth | Mutual TLS (mTLS) where both sides authenticate |
+
+**When to use each profile:**
+
+- **server** - Web servers, load balancers, API endpoints where only the server needs to prove its identity
+- **client** - Applications that need to authenticate to a server (e.g., database clients, API consumers)
+- **peer** - Services that mutually authenticate, such as:
+  - etcd cluster nodes (both server and peer certificates)
+  - Kubernetes components (kubelet, apiserver)
+  - Service mesh sidecars
+  - Any mTLS communication
+
 ---
 
 ## 📝 Directory Structure
