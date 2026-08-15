@@ -39,7 +39,7 @@ get_install_dir() {
     echo -e "${BLUE}📦 PKI Manager Installation${NC}"
     echo "============================"
     echo
-    read -rp "Installation directory [${DEFAULT_INSTALL_DIR}]: " INSTALL_DIR
+    read -rp "Installation directory [${DEFAULT_INSTALL_DIR}]: " INSTALL_DIR </dev/tty
     INSTALL_DIR="${INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
     
     # Expand ~ to home directory
