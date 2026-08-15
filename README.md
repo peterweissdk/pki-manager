@@ -20,13 +20,29 @@
 
 ### Installation
 
+#### Quick Install (Recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/peterweissdk/pki-manager/main/install.sh | sudo bash
+```
+
+This installs the following scripts to `/usr/local/bin` (or a custom path):
+
+| Script | Description |
+|--------|-------------|
+| `pki-manager` | Setup and manage a PKI Certificate Authority server |
+| `pki-client` | Request certificates interactively from a PKI server |
+| `pki-client-cli` | Automate certificate requests and renewals |
+
+#### Manual Installation
+
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/peterweissdk/pki-manager.git
 cd pki-manager
 
 # Make executable
-chmod +x pki-manager.sh
+chmod +x pki-manager.sh pki-client.sh pki-client-cli.sh
 
 # Run as root
 sudo ./pki-manager.sh
@@ -39,7 +55,10 @@ The CFSSL API runs over **HTTPS** with authentication. The easiest way to reques
 ### Using the Client Script (Recommended)
 
 ```bash
-# The client script is included when cloning the repository
+# If installed via install.sh
+pki-client
+
+# Or if using the repository directly
 ./pki-client.sh
 ```
 
